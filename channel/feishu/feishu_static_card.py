@@ -48,10 +48,19 @@ def build_markdown_card(text: str) -> dict:
     }
 
 
-def build_text_delivery(text: str) -> Tuple[str, str]:
-    """Return the Feishu ``msg_type`` and serialized content for a text reply."""
-    if contains_markdown(text):
-        return "interactive", json.dumps(build_markdown_card(text), ensure_ascii=False)
+def build_card_delivery(text: str) -> Tuple[str, str]:
+    """Return the interactive card ``msg_type`` and serialized content for *text*."""
+    return "interactive", json.dumps(build_markdown_card(text), ensure_ascii=False)
+
+
+def build_text_delivery(text: str, force_card: bool = False) -> Tuple[str, str]:
+    """Return the Feishu ``msg_type`` and serialized content for a text reply.
+
+    ``force_card`` renders even Markdown-free text as a card, which scheduled
+    pushes use so every delivery shares one consistent format.
+    """
+    if force_card or contains_markdown(text):
+        return build_card_delivery(text)
     return "text", json.dumps({"text": text}, ensure_ascii=False)
 
 
