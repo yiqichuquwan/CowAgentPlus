@@ -1,0 +1,85 @@
+{
+  "id": "/",
+  "name": "CowAgent 控制台",
+  "short_name": "CowAgent",
+  "description": "CowAgent 智能体控制台：对话、技能、记忆与定时任务",
+  "lang": "zh-Hans",
+  "dir": "ltr",
+  "start_url": "/chat",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#111111",
+  "theme_color": "#35a85b",
+  "categories": ["productivity", "utilities"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/screenshots/wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CowAgent 控制台（桌面）"
+    },
+    {
+      "src": "/assets/screenshots/narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "CowAgent 控制台（手机）"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "对话",
+      "short_name": "对话",
+      "description": "回到对话",
+      "url": "/chat?view=chat",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "配置",
+      "short_name": "配置",
+      "description": "模型与服务配置",
+      "url": "/chat?view=config",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "技能",
+      "short_name": "技能",
+      "description": "管理技能",
+      "url": "/chat?view=skills",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "日志",
+      "short_name": "日志",
+      "description": "查看运行日志",
+      "url": "/chat?view=logs",
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

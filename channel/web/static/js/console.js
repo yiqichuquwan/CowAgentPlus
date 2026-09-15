@@ -13,6 +13,8 @@ let APP_VERSION = '';
 const I18N = {
     zh: {
         console: '控制台',
+        pwa_install: '安装应用',
+        pwa_update: '新版本可用，点击更新',
         nav_chat: '对话', nav_manage: '管理', nav_monitor: '监控',
         menu_chat: '对话', menu_agents: '智能体', menu_config: '配置', menu_skills: '技能',
         agents_page_title: '智能体团队', agents_page_desc: '管理团队中的智能体成员',
@@ -544,6 +546,8 @@ const I18N = {
     'zh-Hant': {
 
         console: '控制台',
+        pwa_install: '安裝應用',
+        pwa_update: '新版本可用，點擊更新',
         nav_chat: '對話', nav_manage: '管理', nav_monitor: '監控',
         menu_chat: '對話', menu_agents: '智慧體', menu_config: '設定', menu_skills: '技能',
         agents_page_title: '智慧體團隊', agents_page_desc: '管理團隊中的智慧體成員',
@@ -1070,6 +1074,8 @@ const I18N = {
         },
     en: {
         console: 'Console',
+        pwa_install: 'Install app',
+        pwa_update: 'New version available — click to update',
         nav_chat: 'Chat', nav_manage: 'Management', nav_monitor: 'Monitor',
         menu_chat: 'Chat', menu_agents: 'Agents', menu_config: 'Config', menu_skills: 'Skills',
         agents_page_title: 'Agent Team', agents_page_desc: 'Manage the Agents on your team',
@@ -16618,6 +16624,14 @@ function initApp() {
         _setSidebarVersionLabel('CowAgent');
     });
     chatInput.focus();
+
+    // Deep link (?view=...) — powers PWA shortcuts. navigateTo's lazy-load
+    // wrapper has long since been installed at this point, so the target view
+    // fetches its own data exactly as a sidebar click would.
+    try {
+        const deepLinkView = new URLSearchParams(window.location.search).get('view');
+        if (deepLinkView && VIEW_META[deepLinkView]) navigateTo(deepLinkView);
+    } catch (e) { /* malformed URL: ignore */ }
 }
 
 // =====================================================================
@@ -17339,4 +17353,102 @@ document.getElementById('task-edit-modal-save').addEventListener('click', saveTa
 document.getElementById('task-edit-modal-delete').addEventListener('click', deleteTask);
 document.getElementById('task-edit-modal-overlay').addEventListener('click', function(e) {
     if (e.target === this) closeTaskEditModal();
+});
+
+// =====================================================================
+// PWA — install prompt + service worker lifecycle
+// =====================================================================
+// Chrome/Edge fire beforeinstallprompt once the app is installable. Suppress
+// the default mini-infobar and surface our own sidebar button instead. iOS
+// Safari has no beforeinstallprompt, so the button simply never appears there
+// (users install via Share → Add to Home Screen).
+let _deferredInstallPrompt = null;
+
+function _pwaInstallBtn() {
+    return document.getElementById('pwa-install-btn');
+}
+
+function _pwaUpdateBtn() {
+    return document.getElementById('pwa-update-btn');
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    _deferredInstallPrompt = e;
+    const btn = _pwaInstallBtn();
+    if (btn) btn.classList.remove('hidden');
+});
+
+window.addEventListener('appinstalled', () => {
+    _deferredInstallPrompt = null;
+    const btn = _pwaInstallBtn();
+    if (btn) btn.classList.add('hidden');
+});
+
+// --- Service worker: register and prompt (never force) updates ------------
+// sw.js deliberately does not skipWaiting on install, so a freshly deployed
+// worker parks in the "waiting" state. We surface it as a button and only
+// activate it when the user accepts, avoiding an asset swap mid-conversation.
+let _pwaRegistration = null;
+let _pwaUpdateRequested = false;
+
+function _showPwaUpdate() {
+    const btn = _pwaUpdateBtn();
+    if (btn) btn.classList.remove('hidden');
+}
+
+function _requestPwaUpdate() {
+    if (_pwaRegistration && _pwaRegistration.waiting) {
+        _pwaUpdateRequested = true;
+        _pwaRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Only meaningful on a secure context (HTTPS or localhost); the guard
+        // and catch keep plain-HTTP access silent.
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then((reg) => {
+            _pwaRegistration = reg;
+            const track = (worker) => {
+                if (!worker) return;
+                worker.addEventListener('statechange', () => {
+                    if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                        _showPwaUpdate();
+                    }
+                });
+            };
+            // A worker may already be waiting from a previous visit.
+            if (reg.waiting && navigator.serviceWorker.controller) _showPwaUpdate();
+            // register() may have kicked off an update check whose worker is
+            // already installing by the time this callback runs, so track it
+            // directly as well as via the (possibly already-fired) updatefound.
+            if (reg.installing) track(reg.installing);
+            reg.addEventListener('updatefound', () => track(reg.installing));
+        }).catch(() => {});
+    });
+
+    // Reload once the accepted worker takes over. Guarded so the first-ever
+    // activation (clients.claim) does not cause a spurious reload.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_pwaUpdateRequested) window.location.reload();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const installBtn = _pwaInstallBtn();
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!_deferredInstallPrompt) return;
+            installBtn.classList.add('hidden');
+            _deferredInstallPrompt.prompt();
+            try {
+                await _deferredInstallPrompt.userChoice;
+            } catch (e) { /* user dismissed */ }
+            _deferredInstallPrompt = null;
+        });
+    }
+
+    const updateBtn = _pwaUpdateBtn();
+    if (updateBtn) updateBtn.addEventListener('click', _requestPwaUpdate);
 });

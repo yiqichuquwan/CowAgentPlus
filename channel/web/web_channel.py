@@ -2341,6 +2341,7 @@ class WebChannel(ChatChannel):
             '/api/update/status', 'UpdateStatusHandler',
             '/mcp/oauth/callback', 'McpOAuthCallbackHandler',
             '/assets/(.*)', 'AssetsHandler',
+            r'/(manifest(?:\.en)?\.webmanifest|sw\.js)', 'PwaFileHandler',
         )
         app = web.application(urls, globals(), autoreload=False)
 
@@ -8988,6 +8989,40 @@ class LogsDownloadHandler:
         web.header('Content-Length', str(len(data)))
         web.header('Cache-Control', 'no-store')
         return data
+
+
+class PwaFileHandler:
+    """Serve the PWA entry files from the console root.
+
+    The service worker has to live at the root (or use a Service-Worker-Allowed
+    header) to control /chat; a worker under /assets/ could only ever control
+    /assets/. The manifest is kept next to it so it can be fetched without
+    touching the auth-guarded API surface.
+    """
+
+    _FILES = {
+        'manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json; charset=utf-8'),
+        'manifest.en.webmanifest': ('manifest.en.webmanifest', 'application/manifest+json; charset=utf-8'),
+        'sw.js': ('sw.js', 'application/javascript; charset=utf-8'),
+    }
+
+    def GET(self, filename):
+        entry = self._FILES.get(filename)
+        if not entry:
+            raise web.notfound()
+        rel_path, content_type = entry
+        static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+        full_path = os.path.normpath(os.path.join(static_dir, rel_path))
+        if not os.path.abspath(full_path).startswith(os.path.abspath(static_dir)):
+            raise web.notfound()
+        if not os.path.isfile(full_path):
+            raise web.notfound()
+        # Always revalidate: an upgraded console must not stay pinned to a
+        # stale manifest / service worker from the browser cache.
+        web.header('Content-Type', content_type)
+        web.header('Cache-Control', 'no-cache')
+        with open(full_path, 'rb') as f:
+            return f.read()
 
 
 class AssetsHandler:
