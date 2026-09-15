@@ -4595,6 +4595,34 @@ function resetComposerHeight() {
     chatInput.style.overflowY = 'hidden';
 }
 
+// Draft persistence. The composer text is saved per (Agent, session) in
+// localStorage on every keystroke, so a refresh, crash, or accidental exit no
+// longer loses what was being typed. Switching sessions or Agents swaps in that
+// conversation's own draft instead of dropping it.
+const DRAFT_KEY_PREFIX = 'cow_draft';
+
+function activeDraftStorageKey() {
+    return `${DRAFT_KEY_PREFIX}:${activeAgentId || 'default'}:${sessionId}`;
+}
+
+function saveDraft() {
+    try {
+        const value = chatInput.value;
+        if (value) localStorage.setItem(activeDraftStorageKey(), value);
+        else localStorage.removeItem(activeDraftStorageKey());
+    } catch (_) {}
+}
+
+/** Render the draft belonging to the current (Agent, session) into the composer. */
+function restoreDraft() {
+    let value = '';
+    try { value = localStorage.getItem(activeDraftStorageKey()) || ''; } catch (_) {}
+    chatInput.value = value;
+    autoResizeComposer();
+    updateSendBtnState();
+    updateSteerBtnState();
+}
+
 // ---------------- Mic button: in-page voice input via the configured ASR provider ----------------
 (function setupMicButton() {
     const micBtn = document.getElementById('mic-btn');
@@ -4942,11 +4970,19 @@ messagesDiv.addEventListener('click', (e) => {
     const copyBtn = e.target.closest('.copy-msg-btn');
     if (copyBtn) {
         e.preventDefault();
-        const msgRoot = copyBtn.closest('.flex.gap-3');
-        const answerEl = msgRoot && msgRoot.querySelector('.answer-content');
-        const rawMd = answerEl && answerEl.dataset.rawMd;
-        if (rawMd) {
-            copyToClipboard(rawMd).then(() => {
+        // User bubbles keep their original text in dataset.rawContent; bot
+        // bubbles keep the rendered Markdown source on .answer-content.
+        const userRoot = copyBtn.closest('.user-message-group');
+        let rawText;
+        if (userRoot) {
+            rawText = userRoot.dataset.rawContent || '';
+        } else {
+            const msgRoot = copyBtn.closest('.flex.gap-3');
+            const answerEl = msgRoot && msgRoot.querySelector('.answer-content');
+            rawText = answerEl && answerEl.dataset.rawMd;
+        }
+        if (rawText) {
+            copyToClipboard(rawText).then(() => {
                 const icon = copyBtn.querySelector('i');
                 if (icon) { icon.className = 'fas fa-check'; setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500); }
             });
@@ -5089,6 +5125,7 @@ function steerActiveTask() {
 
     chatInput.value = '';
     resetComposerHeight();
+    saveDraft();
     updateSteerBtnState();
 
     fetch('/message', {
@@ -6198,6 +6235,7 @@ chatInput.addEventListener('input', function() {
     updateSendBtnState();
     // Reveal/hide the steer button as the user types during a running turn.
     updateSteerBtnState();
+    saveDraft();
 
     const val = this.value;
     if (slashJustSelected) {
@@ -6305,6 +6343,9 @@ chatInput.addEventListener('keydown', function(e) {
 chatInput.addEventListener('blur', () => {
     setTimeout(hideSlashMenu, 150);
 });
+
+// Bring back any draft left over from a previous visit to this conversation.
+restoreDraft();
 
 document.querySelectorAll('.example-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -6636,6 +6677,7 @@ function sendMessage() {
 
     chatInput.value = '';
     resetComposerHeight();
+    saveDraft();
     pendingAttachments = [];
     renderAttachmentPreview();
     sendBtn.disabled = true;
@@ -7593,6 +7635,9 @@ function createUserMessageEl(content, timestamp, attachments) {
                 ${attachHtml}${textHtml}
             </div>
             <div class="flex items-center justify-end gap-2 mt-1.5">
+                <button class="copy-msg-btn text-xs text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors cursor-pointer" title="${currentLang === 'zh' ? '复制' : 'Copy'}">
+                    <i class="fas fa-copy"></i>
+                </button>
                 <button class="edit-msg-btn text-xs text-slate-300 dark:text-slate-600 hover:text-primary-400 dark:hover:text-primary-400 transition-colors cursor-pointer" title="${t('edit_message')}">
                     <i class="fas fa-pen-to-square"></i>
                 </button>
@@ -8355,6 +8400,7 @@ function newChat(optimistic = true, inherit = true) {
     // Generate a fresh session and persist it so the next page load also starts clean
     sessionId = generateSessionId();
     localStorage.setItem(activeSessionStorageKey(), sessionId);
+    restoreDraft();  // a fresh session starts with no draft
     refreshWorkspaceSelector();  // a fresh session starts on the default workspace
     refreshSessionSettings();    // ... and on the global model / permission
     if (typeof wsOnSessionSwitch === 'function') wsOnSessionSwitch();
@@ -9077,6 +9123,7 @@ function switchSession(newSessionId, agentId) {
     sessionId = newSessionId;
     updateEditButtonsState();
     localStorage.setItem(activeSessionStorageKey(), sessionId);
+    restoreDraft();
     refreshWorkspaceSelector();
     refreshSessionSettings();
     // Reflect the new session's context in the mini pie right away.
