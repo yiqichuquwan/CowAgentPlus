@@ -13,7 +13,6 @@ let APP_VERSION = '';
 const I18N = {
     zh: {
         console: '控制台',
-        pwa_install: '安装应用',
         pwa_update: '新版本可用，点击更新',
         nav_chat: '对话', nav_manage: '管理', nav_monitor: '监控',
         menu_chat: '对话', menu_agents: '智能体', menu_config: '配置', menu_skills: '技能',
@@ -546,7 +545,6 @@ const I18N = {
     'zh-Hant': {
 
         console: '控制台',
-        pwa_install: '安裝應用',
         pwa_update: '新版本可用，點擊更新',
         nav_chat: '對話', nav_manage: '管理', nav_monitor: '監控',
         menu_chat: '對話', menu_agents: '智慧體', menu_config: '設定', menu_skills: '技能',
@@ -1074,7 +1072,6 @@ const I18N = {
         },
     en: {
         console: 'Console',
-        pwa_install: 'Install app',
         pwa_update: 'New version available — click to update',
         nav_chat: 'Chat', nav_manage: 'Management', nav_monitor: 'Monitor',
         menu_chat: 'Chat', menu_agents: 'Agents', menu_config: 'Config', menu_skills: 'Skills',
@@ -17403,34 +17400,16 @@ document.getElementById('task-edit-modal-overlay').addEventListener('click', fun
 });
 
 // =====================================================================
-// PWA — install prompt + service worker lifecycle
+// PWA — service worker lifecycle (install prompt handled by the browser)
 // =====================================================================
-// Chrome/Edge fire beforeinstallprompt once the app is installable. Suppress
-// the default mini-infobar and surface our own sidebar button instead. iOS
-// Safari has no beforeinstallprompt, so the button simply never appears there
-// (users install via Share → Add to Home Screen).
-let _deferredInstallPrompt = null;
-
-function _pwaInstallBtn() {
-    return document.getElementById('pwa-install-btn');
-}
-
+// PWA install is intentionally NOT custom-handled here: we used to render an
+// in-sidebar "安装应用" button and suppress the browser's native prompt. We
+// now let the browser show its own install UI (Chrome/Edge address-bar icon,
+// iOS Safari Share → Add to Home Screen). The Service Worker itself is still
+// registered below so an installed PWA gets offline-capable caching.
 function _pwaUpdateBtn() {
     return document.getElementById('pwa-update-btn');
 }
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    _deferredInstallPrompt = e;
-    const btn = _pwaInstallBtn();
-    if (btn) btn.classList.remove('hidden');
-});
-
-window.addEventListener('appinstalled', () => {
-    _deferredInstallPrompt = null;
-    const btn = _pwaInstallBtn();
-    if (btn) btn.classList.add('hidden');
-});
 
 // --- Service worker: register and prompt (never force) updates ------------
 // sw.js deliberately does not skipWaiting on install, so a freshly deployed
@@ -17483,19 +17462,6 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const installBtn = _pwaInstallBtn();
-    if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-            if (!_deferredInstallPrompt) return;
-            installBtn.classList.add('hidden');
-            _deferredInstallPrompt.prompt();
-            try {
-                await _deferredInstallPrompt.userChoice;
-            } catch (e) { /* user dismissed */ }
-            _deferredInstallPrompt = null;
-        });
-    }
-
     const updateBtn = _pwaUpdateBtn();
     if (updateBtn) updateBtn.addEventListener('click', _requestPwaUpdate);
 });

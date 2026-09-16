@@ -15,7 +15,7 @@
 >
 > | 改动 | 说明 |
 > | :--- | :--- |
-> | 🌐 **Web 控制台 → 可安装 PWA**（能力保留） | 新增 [Web App Manifest](https://developer.mozilla.org/docs/Web/Manifest)（中/英双语）、Service Worker、maskable 图标与全套 iOS 启动图。`PwaFileHandler` 从控制台根路径提供 `/manifest*.webmanifest` 与 `/sw.js`，前端注册 SW 并 `preventDefault()` 浏览器原生安装栏。Web UI 内的安装按钮已让位给上游的 update-menu，但浏览器地址栏 / 「安装应用」菜单仍可装 PWA。 |
+> | 🌐 **Web 控制台 → 可安装 PWA**（能力保留） | 新增 [Web App Manifest](https://developer.mozilla.org/docs/Web/Manifest)（中/英双语）、Service Worker、maskable 图标与全套 iOS 启动图。`PwaFileHandler` 从控制台根路径提供 `/manifest*.webmanifest` 与 `/sw.js`，前端注册 SW 但**不再拦截 `beforeinstallprompt`**——浏览器地址栏 / 「安装应用」菜单的原生安装 UI 可直接使用。Web UI 内不再提供自定义安装按钮。 |
 > | ⚡ **流式回复零影响** | Service Worker 仅缓存静态外壳（HTML / CSS / JS / 图标 / manifest），所有实时通道（SSE `/stream`、`/poll`、`/api/*`、文件上传）一律直通网络——流式回复、轮询、上传行为与上游完全一致。 |
 > | 🔄 **接回上游一键更新** | 已同步上游 `c28fff5` + `43edb84` + `7236846`：Web 控制台版本号旁的下拉菜单提供「检查更新 / 立即更新 / 版本说明」，由 `cli/update_service.py` 驱动——自动 git pull → 重启。 |
 > | 🧹 **仓库卫生** | `.gitignore` 新增 `config.json.bak.*`：`app.py` 启动时检测到配置变更会自动写一份带 epoch 后缀的 `.bak`，属于运行期产物，不入版本库。 |
