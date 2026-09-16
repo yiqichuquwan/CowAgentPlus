@@ -91,10 +91,14 @@
 
 /* Sidebar */
 .sidebar-item.active {
+    background: rgba(74, 190, 110, 0.10);
+    color: #228547;
+}
+.sidebar-item.active .item-icon { color: #4ABE6E; }
+.dark .sidebar-item.active {
     background: rgba(255, 255, 255, 0.08);
     color: #FFFFFF;
 }
-.sidebar-item.active .item-icon { color: #4ABE6E; }
 
 /* Session Panel */
 .session-panel {
@@ -642,10 +646,15 @@
     z-index: 60;
     padding: 5px;
     border-radius: 10px;
-    background: #171717;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 30px -6px rgba(15, 23, 42, 0.18), 0 2px 8px -2px rgba(15, 23, 42, 0.10);
     animation: slashMenuIn 0.15s ease-out;
+}
+.dark .update-menu {
+    background: #171717;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
 }
 .update-menu.hidden { display: none; }
 
@@ -662,14 +671,16 @@
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: #d4d4d4;
+    color: #334155;
     font-size: 13px;
     line-height: 1;
     cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease;
     text-align: left;
 }
-.update-menu-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.dark .update-menu-item { color: #d4d4d4; }
+.update-menu-item:hover { background: #f3f4f6; color: #1e293b; }
+.dark .update-menu-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .update-menu-icon {
     position: relative;
     flex-shrink: 0;
@@ -679,8 +690,9 @@
     align-items: center;
     justify-content: center;
     font-size: 13px;
-    color: #8f8f8f;
+    color: #64748b;
 }
+.dark .update-menu-icon { color: #8f8f8f; }
 .update-menu-item:hover .update-menu-icon { color: #4ABE6E; }
 .update-menu-label {
     flex: 1;
@@ -692,10 +704,13 @@
 .update-menu-item.is-new .update-menu-label { color: #ef4444; }
 .update-menu-item.is-new:hover .update-menu-label { color: #ef4444; }
 .update-menu-item.is-ok .update-menu-label { color: #4ABE6E; }
-.update-menu-ext { flex-shrink: 0; font-size: 10px; color: #6b6b6b; }
+.update-menu-ext { flex-shrink: 0; font-size: 10px; color: #94a3b8; }
+.dark .update-menu-ext { color: #6b6b6b; }
 .update-menu-item.is-disabled { cursor: default; }
-.update-menu-item.is-disabled:hover { background: transparent; color: #d4d4d4; }
-.update-menu-item.is-disabled:hover .update-menu-icon { color: #8f8f8f; }
+.update-menu-item.is-disabled:hover { background: transparent; color: #94a3b8; }
+.update-menu-item.is-disabled:hover .update-menu-icon { color: #64748b; }
+.dark .update-menu-item.is-disabled:hover { background: transparent; color: #d4d4d4; }
+.dark .update-menu-item.is-disabled:hover .update-menu-icon { color: #8f8f8f; }
 
 /* Red dot flagging a newer version, pinned to the top-right of the icon slot
    so it never shifts the label (mirrors the desktop NavRail badge). */
@@ -707,9 +722,10 @@
     height: 5px;
     border-radius: 999px;
     background: #ef4444;
-    box-shadow: 0 0 0 1.5px #171717;
+    box-shadow: 0 0 0 1.5px #ffffff;
     pointer-events: none;
 }
+.dark .update-dot { box-shadow: 0 0 0 1.5px #171717; }
 .update-dot.hidden { display: none; }
 .fa-spin-update { animation: fa-spin 0.9s linear infinite; }
 
