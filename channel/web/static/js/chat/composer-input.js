@@ -249,11 +249,40 @@ function selectSlashCommand(idx) {
     chatInput.selectionStart = chatInput.selectionEnd = chosen.length;
 }
 
+// Draft persistence. The composer text is saved per (Agent, session) in
+// localStorage on every keystroke, so a refresh, crash, or accidental exit no
+// longer loses what was being typed. Switching sessions or Agents swaps in that
+// conversation's own draft instead of dropping it.
+const DRAFT_KEY_PREFIX = 'cow_draft';
+
+function activeDraftStorageKey() {
+    return `${DRAFT_KEY_PREFIX}:${activeAgentId || 'default'}:${sessionId}`;
+}
+
+function saveDraft() {
+    try {
+        const value = chatInput.value;
+        if (value) localStorage.setItem(activeDraftStorageKey(), value);
+        else localStorage.removeItem(activeDraftStorageKey());
+    } catch (_) {}
+}
+
+/** Render the draft belonging to the current (Agent, session) into the composer. */
+function restoreDraft() {
+    let value = '';
+    try { value = localStorage.getItem(activeDraftStorageKey()) || ''; } catch (_) {}
+    chatInput.value = value;
+    autoResizeComposer();
+    updateSendBtnState();
+    updateSteerBtnState();
+}
+
 chatInput.addEventListener('input', function() {
     autoResizeComposer();
     updateSendBtnState();
     // Reveal/hide the steer button as the user types during a running turn.
     updateSteerBtnState();
+    saveDraft();
 
     const val = this.value;
     if (slashJustSelected) {

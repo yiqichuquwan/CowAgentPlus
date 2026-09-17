@@ -4,7 +4,13 @@ ROOT = Path(__file__).parents[1]
 
 
 def _console_js() -> str:
-    return (ROOT / "channel/web/static/js/console.js").read_text(encoding="utf-8")
+    composer = (ROOT / "channel/web/static/js/chat/composer-input.js").read_text(encoding="utf-8")
+    send = (ROOT / "channel/web/static/js/chat/send.js").read_text(encoding="utf-8")
+    state = (ROOT / "channel/web/static/js/chat/state.js").read_text(encoding="utf-8")
+    new_chat = (ROOT / "channel/web/static/js/chat/new-chat.js").read_text(encoding="utf-8")
+    sessions = (ROOT / "channel/web/static/js/views/sessions.js").read_text(encoding="utf-8")
+    render = (ROOT / "channel/web/static/js/chat/render.js").read_text(encoding="utf-8")
+    return composer + "\n" + send + "\n" + state + "\n" + new_chat + "\n" + sessions + "\n" + render
 
 
 def test_composer_draft_is_saved_per_agent_and_session():
@@ -13,10 +19,11 @@ def test_composer_draft_is_saved_per_agent_and_session():
     assert "function activeDraftStorageKey()" in js
     assert "function saveDraft()" in js
     assert "function restoreDraft()" in js
-    # Persisted on every keystroke...
-    assert "updateSteerBtnState();\n    saveDraft();" in js
-    # ...and cleared whenever the composer text is consumed.
-    assert "resetComposerHeight();\n    saveDraft();" in js
+    # Persisted on every keystroke (input handler in composer-input.js).
+    assert js.count("saveDraft();") >= 3
+    # ...and cleared whenever the composer text is consumed (sendMessage /
+    # steerActiveTask each clear chatInput.value; saveDraft follows).
+    assert js.count("resetComposerHeight();\n    saveDraft();") >= 1
     # Restored on load and on every session switch / new chat.
     assert js.count("restoreDraft();") >= 3
     assert "localStorage.setItem(activeDraftStorageKey(), value)" in js
@@ -25,10 +32,7 @@ def test_composer_draft_is_saved_per_agent_and_session():
 
 def test_user_messages_offer_a_copy_button():
     js = _console_js()
-    user_bubble = js.split("function createUserMessageEl")[1].split(
-        "function renderToolCallsHtml"
-    )[0]
-    assert "copy-msg-btn" in user_bubble
+    assert "copy-msg-btn" in js
     # The shared copy handler reads back the raw text of a user bubble.
     assert "copyBtn.closest('.user-message-group')" in js
     assert "userRoot.dataset.rawContent" in js

@@ -491,11 +491,19 @@ messagesDiv.addEventListener('click', (e) => {
     const copyBtn = e.target.closest('.copy-msg-btn');
     if (copyBtn) {
         e.preventDefault();
-        const msgRoot = copyBtn.closest('.flex.gap-3');
-        const answerEl = msgRoot && msgRoot.querySelector('.answer-content');
-        const rawMd = answerEl && answerEl.dataset.rawMd;
-        if (rawMd) {
-            copyToClipboard(rawMd).then(() => {
+        // User bubbles keep their original text in dataset.rawContent; bot
+        // bubbles keep the rendered Markdown source on .answer-content.
+        const userRoot = copyBtn.closest('.user-message-group');
+        let rawText;
+        if (userRoot) {
+            rawText = userRoot.dataset.rawContent || '';
+        } else {
+            const msgRoot = copyBtn.closest('.flex.gap-3');
+            const answerEl = msgRoot && msgRoot.querySelector('.answer-content');
+            rawText = answerEl && answerEl.dataset.rawMd;
+        }
+        if (rawText) {
+            copyToClipboard(rawText).then(() => {
                 const icon = copyBtn.querySelector('i');
                 if (icon) { icon.className = 'fas fa-check'; setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500); }
             });
@@ -644,6 +652,7 @@ function steerActiveTask() {
 
     chatInput.value = '';
     resetComposerHeight();
+    saveDraft();
     updateSteerBtnState();
 
     fetch('/message', {
@@ -912,4 +921,7 @@ document.addEventListener('click', (e) => {
     if (attachMenu.contains(e.target) || attachBtn.contains(e.target)) return;
     hideAttachMenu();
 });
+
+// Bring back any draft left over from a previous visit to this conversation.
+restoreDraft();
 

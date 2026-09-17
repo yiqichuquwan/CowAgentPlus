@@ -138,6 +138,7 @@ function sendMessage() {
 
     chatInput.value = '';
     resetComposerHeight();
+    saveDraft();
     pendingAttachments = [];
     renderAttachmentPreview();
     sendBtn.disabled = true;
