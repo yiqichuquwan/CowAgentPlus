@@ -40,6 +40,34 @@ VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi", ".mov", ".mkv"}
 # multipart body cap on the HTTP server so both upload routes agree.
 MAX_LOCAL_IMPORT_BYTES = 512 * 1024 * 1024
 
+# Endpoints on the user-facing send path. Their access lines are worth an INFO
+# entry; everything else (static assets, the high-frequency /poll read) stays at
+# DEBUG so a polling client can't flood run.log.
+_ACCESS_LOG_PATHS = ("/message", "/stream", "/upload", "/cancel", "/steer")
+
+
+def _web_access_log(mw, status, environ):
+    """web.py LogMiddleware hook: record method/path/status in run.log.
+
+    The stock hook was silenced (``LogMiddleware.log = lambda ...: None``), which
+    left the whole HTTP surface invisible. A web-console "发送失败" toast then
+    produced no server-side trace at all, so a client/connection failure and a
+    handler rejection looked identical. Worse, when the cheroot worker pool is
+    saturated, connections are refused before any handler runs, so no
+    handler-level log can exist either. Logging the critical endpoints (and
+    every request at DEBUG) makes the distinction decidable: an absent line
+    means the request never reached the server.
+    """
+    path = environ.get("PATH_INFO", "") or ""
+    method = environ.get("REQUEST_METHOD", "-") or "-"
+    remote = environ.get("REMOTE_ADDR", "-") or "-"
+    critical = any(path == p or path.startswith(p + "/") for p in _ACCESS_LOG_PATHS)
+    line = f"[WebChannel] {method} {path} -> {status} ({remote})"
+    if critical:
+        logger.info(line)
+    else:
+        logger.debug(line)
+
 
 def _is_loopback_request() -> bool:
     """True when the current request came straight from this machine.

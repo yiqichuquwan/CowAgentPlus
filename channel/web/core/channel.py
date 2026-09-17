@@ -1144,6 +1144,38 @@ class WebChannel(ChatChannel):
             self._drop_sse_request(request_id)
         return len(stale)
 
+    def _log_pool_stats(self) -> None:
+        """Log cheroot worker-pool + SSE-stream occupancy.
+
+        Known failure mode of the WSGI server (see the comment in ``startup``):
+        SSE streams and idle keep-alive sockets occupy worker threads; once the
+        pool is exhausted the backlog fills and new connections are refused
+        *before* any handler runs, so the client sees a "发送失败" toast while
+        run.log stays silent. Snapshotting the numbers while the server is
+        still healthy gives the next incident evidence instead of silence.
+        """
+        try:
+            with self._sse_streams_lock:
+                streams = len(self.sse_streams)
+            pool = getattr(self._http_server, "requests", None)
+            idle = pool.idle.qsize() if pool is not None else None
+            queued = pool.qsize() if pool is not None else None
+            max_workers = getattr(pool, "max", None)
+        except Exception as e:
+            logger.debug(f"[WebChannel] pool stats unavailable: {e}")
+            return
+
+        msg = (
+            f"[WebChannel] pool stats: idle={idle} queued={queued} "
+            f"max={max_workers} sse_streams={streams}"
+        )
+        # No idle worker AND requests already waiting is the moment right before
+        # connections start being refused — surface that at WARNING.
+        if idle == 0 and (queued or 0) > 0:
+            logger.warning(msg)
+        else:
+            logger.debug(msg)
+
     def _start_sse_janitor(self):
         """Start a background thread that reclaims orphaned SSE logs.
 
@@ -1166,6 +1198,7 @@ class WebChannel(ChatChannel):
                             f"[WebChannel] SSE janitor reclaimed {reclaimed} "
                             f"idle stream(s)"
                         )
+                    self._log_pool_stats()
                 except Exception as e:
                     logger.warning(f"[WebChannel] SSE janitor error: {e}")
 
@@ -1499,8 +1532,12 @@ class WebChannel(ChatChannel):
         from channel.web.web_channel import build_app
         app = build_app()
 
-        # 完全禁用web.py的HTTP日志输出
-        web.httpserver.LogMiddleware.log = lambda self, status, environ: None
+        # Route web.py's access log into run.log instead of discarding it. The
+        # default printed to stderr (lost under nohup); the old no-op made every
+        # request invisible. Critical send-path endpoints log at INFO, the rest
+        # at DEBUG (see _web_access_log).
+        from channel.web.core._common import _web_access_log
+        web.httpserver.LogMiddleware.log = _web_access_log
 
         # 配置web.py的日志级别为ERROR
         logging.getLogger("web").setLevel(logging.ERROR)
@@ -1515,9 +1552,10 @@ class WebChannel(ChatChannel):
         # too small: when SSE streams occupy many threads, the backlog fills
         # and new connections get refused (ERR_CONNECTION_ABORTED).
         server.request_queue_size = 128
-        server.timeout = 300
+        # Idle keep-alive sockets hold a worker thread for the whole timeout.
+        server.timeout = 60
         server.requests.min = 20
-        server.requests.max = 80
+        server.requests.max = 120
         # Allow large attachments (screenshots, PDFs, short videos). cheroot's
         # default is unlimited (0), but pin an explicit, generous cap so an
         # oversized body fails with a clean 413 instead of a connection reset

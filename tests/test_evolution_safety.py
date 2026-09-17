@@ -269,5 +269,71 @@ class EvolutionSafetyTest(unittest.TestCase):
             temp.cleanup()
 
 
+class _RecordingChannel:
+    def __init__(self):
+        self.sent = []
+
+    def send(self, reply, context):
+        self.sent.append((reply, context))
+
+
+class EvolutionNotifyRoutingTest(unittest.TestCase):
+    """The notify push must reuse the live channel instance.
+
+    A bare ``create_channel`` singleton is a never-started, credential-less
+    object in a multi-instance install, so a FeiShu push failed with
+    ``code=10003 invalid param`` → ``99991661 Missing access token``. Routing
+    through ``_resolve_delivery_channel`` (and carrying the instance id) is the
+    fix; this pins that contract.
+    """
+
+    def test_notify_resolves_live_instance_and_passes_identity(self):
+        channel = _RecordingChannel()
+        seen = {}
+
+        def fake_resolve(channel_type, instance_id="", receiver=""):
+            seen.update(
+                channel_type=channel_type,
+                instance_id=instance_id,
+                receiver=receiver,
+            )
+            return channel
+
+        # Stub the whole submodule so the heavy agent.tools package (whose
+        # build-time deps this suite deliberately avoids) is never imported.
+        fake_module = types.ModuleType("agent.tools.scheduler.integration")
+        fake_module._resolve_delivery_channel = fake_resolve
+
+        with patch.dict(
+            sys.modules, {"agent.tools.scheduler.integration": fake_module}
+        ):
+            executor._notify_user("feishu", "ou_user", "summary text", "feishu-abc")
+
+        self.assertEqual(seen, {
+            "channel_type": "feishu",
+            "instance_id": "feishu-abc",
+            "receiver": "ou_user",
+        })
+        self.assertEqual(len(channel.sent), 1)
+        _reply, context = channel.sent[0]
+        self.assertEqual(context["receiver"], "ou_user")
+        self.assertEqual(context["instance_id"], "feishu-abc")
+        self.assertIsNone(context["msg"])
+        self.assertEqual(context["receive_id_type"], "open_id")
+
+    def test_note_user_turn_carries_instance_id(self):
+        from agent.evolution.trigger import note_user_turn
+
+        agent = SimpleNamespace()
+        note_user_turn(
+            agent,
+            channel_type="feishu",
+            receiver="ou_user",
+            instance_id="feishu-abc",
+        )
+        self.assertEqual(agent._evo_instance_id, "feishu-abc")
+        self.assertEqual(agent._evo_receiver, "ou_user")
+
+
 if __name__ == "__main__":
     unittest.main()

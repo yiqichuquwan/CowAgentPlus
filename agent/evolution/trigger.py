@@ -55,7 +55,9 @@ def _context_pressure_reached(agent) -> bool:
         return False
 
 
-def note_user_turn(agent, channel_type: str = "", receiver: str = "") -> None:
+def note_user_turn(
+    agent, channel_type: str = "", receiver: str = "", instance_id: str = ""
+) -> None:
     """Record activity for a session's agent. Called once per real user turn.
 
     Maintains, on the agent instance:
@@ -63,6 +65,9 @@ def note_user_turn(agent, channel_type: str = "", receiver: str = "") -> None:
       _evo_turns         : user turns since the last evolution
       _evo_channel_type  : originating channel (for later notify)
       _evo_receiver      : push target for notify
+      _evo_instance_id   : channel instance that saw the turn. Delivery must go
+                           back out through the same login (a Feishu open_id is
+                           scoped to one app), so this rides along to notify.
     """
     try:
         agent._evo_last_active = time.time()
@@ -71,6 +76,8 @@ def note_user_turn(agent, channel_type: str = "", receiver: str = "") -> None:
             agent._evo_channel_type = channel_type
         if receiver:
             agent._evo_receiver = receiver
+        if instance_id:
+            agent._evo_instance_id = instance_id
     except Exception:
         pass
 
@@ -143,6 +150,7 @@ def _scan_once(agent_bridge, cfg) -> None:
 
             channel_type = getattr(agent, "_evo_channel_type", "") or ""
             receiver = getattr(agent, "_evo_receiver", "") or ""
+            instance_id = getattr(agent, "_evo_instance_id", "") or ""
 
             run_evolution_for_session(
                 agent_bridge,
@@ -150,6 +158,7 @@ def _scan_once(agent_bridge, cfg) -> None:
                 agent_id=agent_id,
                 channel_type=channel_type,
                 receiver=receiver,
+                instance_id=instance_id,
                 idle_minutes=(now - last_active) / 60 if last_active > 0 else 0.0,
             )
         except Exception as e:

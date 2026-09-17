@@ -31,45 +31,28 @@ function sendVoiceMessage(text, audioUrl) {
         lang: currentLang,
     };
 
-    const MAX_RETRIES = 2;
-    const RETRY_DELAY_MS = 1000;
-    function postWithRetry(attempt) {
-        fetch('/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'success') {
-                rememberLiveSpeaker(data);
-                setLoadingSpeaker(loadingEl, data.request_id);
-                if (data.inline_reply) {
-                    // Synchronous fast-path reply (e.g. /cancel); skip SSE.
-                    loadingEl.remove();
-                    addBotMessage(data.inline_reply, new Date());
-                } else if (data.stream) {
-                    setSendBtnCancelMode(data.request_id);
-                    startSSE(data.request_id, loadingEl, timestamp, titleInfo);
-                } else {
-                    loadingContainers[data.request_id] = loadingEl;
-                }
-            } else {
+    postMessage(body, {
+        tag: 'sendVoiceMessage',
+        onSuccess: (data) => {
+            rememberLiveSpeaker(data);
+            setLoadingSpeaker(loadingEl, data.request_id);
+            if (data.inline_reply) {
+                // Synchronous fast-path reply (e.g. /cancel); skip SSE.
                 loadingEl.remove();
-                addBotMessage(t('error_send'), new Date());
-                resetSendBtnSendMode();
+                addBotMessage(data.inline_reply, new Date());
+            } else if (data.stream) {
+                setSendBtnCancelMode(data.request_id);
+                startSSE(data.request_id, loadingEl, timestamp, titleInfo);
+            } else {
+                loadingContainers[data.request_id] = loadingEl;
             }
-        })
-        .catch(err => {
-            if (attempt < MAX_RETRIES) {
-                setTimeout(() => postWithRetry(attempt + 1), RETRY_DELAY_MS * (attempt + 1));
-                return;
-            }
+        },
+        onFailure: (key) => {
             loadingEl.remove();
-            addBotMessage(t('error_send'), new Date());
-        });
-    }
-    postWithRetry(0);
+            addBotMessage(t(key), new Date());
+            resetSendBtnSendMode();
+        },
+    });
 }
 
 function addUserVoiceMessage(audioUrl, caption, timestamp) {
