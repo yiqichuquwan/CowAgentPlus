@@ -4,10 +4,14 @@
 
 /* Sidebar */
 .sidebar-item.active {
+    background: rgba(74, 190, 110, 0.10);
+    color: #228547;
+}
+.sidebar-item.active .item-icon { color: #4ABE6E; }
+.dark .sidebar-item.active {
     background: rgba(255, 255, 255, 0.08);
     color: #FFFFFF;
 }
-.sidebar-item.active .item-icon { color: #4ABE6E; }
 
 /* Session Panel */
 .session-panel {
