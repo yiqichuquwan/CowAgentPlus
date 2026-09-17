@@ -18,6 +18,7 @@
 > | 🌐 **Web 控制台 → 可安装 PWA**（能力保留） | 新增 [Web App Manifest](https://developer.mozilla.org/docs/Web/Manifest)（中/英双语）、Service Worker、maskable 图标与全套 iOS 启动图。`PwaFileHandler` 从控制台根路径提供 `/manifest*.webmanifest` 与 `/sw.js`，前端注册 SW 但**不再拦截 `beforeinstallprompt`**——浏览器地址栏 / 「安装应用」菜单的原生安装 UI 可直接使用。Web UI 内不再提供自定义安装按钮。 |
 > | ⚡ **流式回复零影响** | Service Worker 仅缓存静态外壳（HTML / CSS / JS / 图标 / manifest），所有实时通道（SSE `/stream`、`/poll`、`/api/*`、文件上传）一律直通网络——流式回复、轮询、上传行为与上游完全一致。 |
 > | 🔄 **接回上游一键更新** | 已同步上游 `c28fff5` + `43edb84` + `7236846`：Web 控制台版本号旁的下拉菜单提供「检查更新 / 立即更新 / 版本说明」，由 `cli/update_service.py` 驱动——自动 git pull → 重启。 |
+> | 🐛 **Web 智能体管理面板：切换时技能面板刷新** | 修复 bug：在「能力」tab 切换左侧其他智能体时，勾选状态停留在上一个智能体（顶栏头像/名字已更新，但可见的技能面板未刷新）。`openAgentDetail()` 现在会按当前激活 tab 主动重渲染对应面板。 |
 > | 🧹 **仓库卫生** | `.gitignore` 新增 `config.json.bak.*`：`app.py` 启动时检测到配置变更会自动写一份带 epoch 后缀的 `.bak`，属于运行期产物，不入版本库。 |
 >
 > 其余代码与上游同步；本 fork **只在 Web 控制台前端与仓库卫生层面**做增量改进，不修改 Agent 核心 / Model / Channel / Memory / Knowledge 等逻辑。
