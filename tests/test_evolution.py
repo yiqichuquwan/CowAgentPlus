@@ -571,7 +571,7 @@ def run_stub():
             channel = FakeChannel()
             import agent.evolution.executor as ex
             orig_notify = ex._notify_user
-            ex._notify_user = lambda ct, rcv, summary: channel.send(
+            ex._notify_user = lambda ct, rcv, summary, *_: channel.send(
                 type("R", (), {"content": summary})(),
                 {"receiver": rcv},
             )
@@ -750,7 +750,7 @@ def run_real():
     # Capture the user-facing reply instead of pushing it to a channel.
     captured = {"reply": None}
     orig_notify = ex._notify_user
-    ex._notify_user = lambda ct, rcv, summary: captured.__setitem__("reply", summary)
+    ex._notify_user = lambda ct, rcv, summary, *_: captured.__setitem__("reply", summary)
 
     results = []  # (name, goal, evolved, changed, reply_ok)
 

@@ -150,3 +150,55 @@ function applyHighlighting(container) {
     }, 0);
 }
 
+// POST /message with a bounded timeout and retries. The backend answers
+// /message immediately (it spawns the run and returns a request_id), so a
+// request that does not settle quickly is a rejected or hung connection, not a
+// slow answer — the exact case that used to surface as an unexplained
+// "发送失败" toast. A timeout is reported as 请求超时, and the real status /
+// error is logged so the browser console tells the two apart.
+const MESSAGE_POST_TIMEOUT_MS = 15000;
+const MESSAGE_POST_MAX_RETRIES = 2;
+const MESSAGE_POST_RETRY_DELAY_MS = 1000;
+
+function postMessage(body, { tag, onSuccess, onFailure }) {
+    function attempt(n) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), MESSAGE_POST_TIMEOUT_MS);
+        fetch('/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+        })
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            clearTimeout(timer);
+            if (data && data.status === 'success') {
+                onSuccess(data);
+            } else {
+                console.error(`[${tag}] server rejected the message:`, (data && data.message) || data);
+                onFailure('error_send');
+            }
+        })
+        .catch(err => {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') {
+                console.warn(`[${tag}] request timed out after ${MESSAGE_POST_TIMEOUT_MS}ms`);
+                onFailure('error_timeout');
+                return;
+            }
+            if (n < MESSAGE_POST_MAX_RETRIES) {
+                console.warn(`[${tag}] attempt ${n + 1} failed, retrying...`, err);
+                setTimeout(() => attempt(n + 1), MESSAGE_POST_RETRY_DELAY_MS * (n + 1));
+                return;
+            }
+            console.error(`[${tag}] giving up after ${n + 1} attempts:`, err);
+            onFailure('error_send');
+        });
+    }
+    attempt(0);
+}
+

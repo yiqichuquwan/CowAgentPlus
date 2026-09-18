@@ -1526,10 +1526,16 @@ class AgentBridge:
                     from agent.evolution.trigger import note_user_turn
                     ch = (context.get("channel_type") or "") if context else ""
                     rcv = (context.get("receiver") or "") if context else ""
+                    iid = (context.get("instance_id") or "") if context else ""
                     is_group = bool(context.get("isgroup")) if context else False
                     # Only enable proactive push for single chats (group push is
                     # noisy); group sessions still evolve, just without notify.
-                    note_user_turn(agent, channel_type=ch, receiver=(rcv if not is_group else ""))
+                    note_user_turn(
+                        agent,
+                        channel_type=ch,
+                        receiver=(rcv if not is_group else ""),
+                        instance_id=iid,
+                    )
                 except Exception:
                     pass
 

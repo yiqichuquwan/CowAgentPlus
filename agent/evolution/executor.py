@@ -377,6 +377,7 @@ def run_evolution_for_session(
     agent_id: str = "default",
     channel_type: str = "",
     receiver: str = "",
+    instance_id: str = "",
     user_id: Optional[str] = None,
     idle_minutes: float = 0.0,
 ) -> bool:
@@ -586,7 +587,7 @@ def run_evolution_for_session(
         # change" gate above is the only throttle we need: real evolutions are
         # rare, so no extra opt-in switch or daily-count limit is required.
         if channel_type and receiver:
-            _notify_user(channel_type, receiver, result)
+            _notify_user(channel_type, receiver, result, instance_id)
 
         transaction.commit()
         return True
@@ -633,24 +634,39 @@ def _inject_evolution_record(
         logger.debug(f"[Evolution] Failed to inject evolution record: {e}")
 
 
-def _notify_user(channel_type: str, receiver: str, summary: str) -> None:
-    """Push the evolution summary to the user's channel as a new message."""
+def _notify_user(
+    channel_type: str, receiver: str, summary: str, instance_id: str = ""
+) -> None:
+    """Push the evolution summary to the user's channel as a new message.
+
+    Delivery must reuse the *running* channel instance, not a bare
+    ``create_channel`` singleton: in a multi-instance install (several Feishu
+    bots, each with credentials in team.json's ``channel_instances``) a fresh
+    singleton is a never-started, credential-less object whose send fails with
+    Feishu ``code=10003 invalid param`` → ``99991661 Missing access token``,
+    silently dropping the notification. ``_resolve_delivery_channel`` picks the
+    live instance by ``instance_id``, or recovers it from the recipient
+    directory by ``receiver`` when the id is unknown — the same path the
+    scheduler uses for out-of-band pushes.
+    """
     try:
         from bridge.context import Context, ContextType
         from bridge.reply import Reply, ReplyType
-        from channel.channel_factory import create_channel
+        from agent.tools.scheduler.integration import _resolve_delivery_channel
 
         context = Context(ContextType.TEXT, summary)
         context["receiver"] = receiver
         context["isgroup"] = False
         context["session_id"] = receiver
+        if instance_id:
+            context["instance_id"] = instance_id
         # Channels that reply to an original message need msg=None for a fresh push.
         if channel_type in ("feishu", "dingtalk", "wecom_bot", "qq"):
             context["msg"] = None
         if channel_type == "feishu":
             context["receive_id_type"] = "open_id"
 
-        channel = create_channel(channel_type)
+        channel = _resolve_delivery_channel(channel_type, instance_id, receiver)
         if not channel:
             return
 
