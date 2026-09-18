@@ -1,307 +1,62 @@
 <p align="center"><img src="https://github.com/user-attachments/assets/eca9a9ec-8534-4615-9e0f-96c5ac1d10a3" alt="CowAgent" width="420" /></p>
 
 <p align="center">
-  <a href="https://github.com/zhayujie/CowAgent/releases/latest"><img src="https://img.shields.io/github/v/release/zhayujie/CowAgent?cacheSeconds=3600" alt="Latest release"></a>
   <a href="https://github.com/zhayujie/CowAgent/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
-  <a href="https://github.com/zhayujie/CowAgent"><img src="https://img.shields.io/github/stars/zhayujie/CowAgent?style=flat-square&cacheSeconds=3600" alt="Stars"></a>
-  <a href="https://docs.cowagent.ai/"><img src="https://img.shields.io/badge/Docs-cowagent.ai-blue?style=flat&logo=readthedocs&logoColor=white" alt="Docs"></a>
-  <a href="https://cdn.link-ai.tech/code/cow/cowagent-wechat-group.png"><img src="https://img.shields.io/badge/WeChat-Group-07C160?style=flat&logo=wechat&logoColor=white" alt="WeChat Group"></a>
-  <a href="https://discord.gg/9U8eA8v9TR"><img src="https://img.shields.io/badge/Discord-Join-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/25763" target="_blank"><img src="https://trendshift.io/api/badge/repositories/25763" alt="zhayujie%2FCowAgent | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</p>
-
-<p align="center">
-  [English] | [<a href="docs/zh/README.md">中文</a>] | [<a href="docs/zh/README-Hant.md">繁體中文</a>] | [<a href="docs/ja/README.md">日本語</a>]
-</p>
-
-**CowAgent** is an open-source super AI assistant that proactively plans tasks, controls your computer and external services, creates and runs Skills, builds a personal knowledge base and long-term memory, forms multi-agent teams, and grows alongside you through self-evolution — a reference implementation of Agent Harness engineering.
-
-CowAgent is lightweight, easy to deploy, and built to extend. Plug in any major LLM provider and run it 24/7 on a personal computer or server, across the web and all major IM platforms.
-
-<p align="center">
-  <a href="https://cowagent.ai/">🌐 Website</a> &nbsp;·&nbsp;
-  <a href="https://docs.cowagent.ai/intro/index">📖 Docs</a> &nbsp;·&nbsp;
-  <a href="https://docs.cowagent.ai/guide/quick-start">🚀 Quick Start</a> &nbsp;·&nbsp;
-  <a href="https://skills.cowagent.ai/">🧩 Skill Hub</a> &nbsp;·&nbsp;
-  <a href="https://cowagent.ai/download/">💻 Download</a> &nbsp;·&nbsp;
-  <a href="https://link-ai.tech/cowagent/create">☁️ Try Online</a>
-</p>
-
-<br/>
-
-## 🎬 Demo
-
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/8625a19f-615c-4343-8be8-3707ce4d4d4e" controls muted playsinline width="720">
-    Your browser can't play this video.
-    <a href="https://cowagent.ai/">Watch the demo on our website →</a>
-  </video>
-</p>
+> [!IMPORTANT]
+>
+> ### 🐮 This is a personal fork: **CowAgentPlus**
+>
+> 本仓库是 [`zhayujie/CowAgent`](https://github.com/zhayujie/CowAgent) 的个人 fork —— **CowAgentPlus**。
+> 上游：<https://github.com/zhayujie/CowAgent> · 本仓库：<https://github.com/yiqichuquwan/CowAgentPlus>
+>
+> #### Fork 提交历史与上游对照（按时间顺序）
+>
+> 下表列出 `dev` 分支相对于 `upstream/master` HEAD (`8f1b19f1`) 的全部 fork 私有提交，按提交时间从旧到新排列。**「已丢弃」** 表示在 rebase / 同步时可放心 `git revert` 或在 rebase 时丢弃该提交；**「仍需保留」** 表示上游尚未覆盖该改动，丢弃会回归问题。
+>
+> | # | 提交 | 改动 | 上游状态（截至 `upstream/master` @ `8f1b19f1`） |
+> | :-: | --- | --- | --- |
+> | 1 | `6aa1f77e` | `.gitignore` 加 `config.json.bak.*` + `git rm --cached .preview_secret`（HMAC 密钥），轮换本机旧值 | **仍需保留**——upstream `.gitignore` 只忽略整个 `config.json`，未匹配 `.bak.*` 后缀；upstream `.gitignore` 已含 `.preview_secret`，但**文件本身仍入库**（`git ls-tree upstream/master .preview_secret` 命中），本 fork 才真正 `git rm --cached` |
+> | 2 | `ae6b0939` | README fork 公告 + 改动对照表 | **不适用**——fork 元信息，不在上游比较范围内 |
+> | 3 | `6acc4904` | Web 控制台改 PWA（manifest / sw / 图标 / 启动图）+ `PwaFileHandler` 根路由 + HTTPS cookie（`_is_secure_request`）+ `chat.html` 补回 sidebar/session-panel/team-chat 三个 include | **仍需保留**——upstream `channel/web/static/` 无任何 manifest / sw.js；无 `PwaFileHandler`；无 `_is_secure_request`；`pages.py::RootHandler` 仍用 `seeother('/')`（web_channel.py 拆分 PR #3174 合并时漏删 include，已修） |
+> | 4 | `eb0f8703` | 控制台输入草稿按 (Agent, 会话) 存 localStorage + 用户消息气泡加复制按钮 + 切换智能体时刷新可见技能面板 | **仍需保留**——upstream `chat/composer-input.js` / `send.js` / `state.js` 等无 `DRAFT_KEY_PREFIX` / `saveDraft` / 复制按钮；`openAgentDetail` 不重绘可见技能面板 |
+> | 5 | `bc7813d5` | Web 侧边栏浅色主题（`.sidebar-item.active` / `.update-menu` / `.update-menu-item` 双套色） | **仍需保留**——upstream 拆分后的 `templates/layout/sidebar.html` 与 `static/css/sessions.css` 仍硬编码深色，浅色模式下左黑右白 |
+> | 6 | `6ec66c33` | Web 发送失败可见化（web.py LogMiddleware 改回 run.log + cheroot pool stats + `postMessage` 15s 超时）+ 飞书 evolution 通知改卡片（`_notify_user` 增 request_id/data 参数） | **仍需保留**——upstream `LogMiddleware.log` 仍 no-op，cheroot pool 饱和时连接在 handler 之前就被拒，server-side 无任何 trace；evolution `_notify_user` 仍走原生 text，长文/Markdown 在飞书 app 渲染差 |
+> | 7 | `3112f19b` | feishu 定时任务推送统一卡片格式（`build_text_delivery(force_card=True)`） | **仍需保留**——upstream `feishu_static_card.py::build_text_delivery` 无 `force_card` 参数，定时任务仍走原生 text |
+> | 8 | `12857cd4` | embedding 自定义 provider 允许无 api_key（`custom:` 前缀特例，兼容 keyless 本地服务如 TEI / bge-m3） | **仍需保留**——upstream `agent/memory/embedding/factory.py` 在 `if not api_key:` 分支直接 `return None` 并报 "API key is missing"，未对 `custom:` 前缀做特例 |
+> | 9 | `2d448484` | `run.sh` 优先 `.venv/bin/python` + `pip_cmd()` 回退到 `uv pip`（避免污染宿主 `~/.local`） | **仍需保留**——upstream `run.sh` 仍装进系统 Python user site，常用 `--break-system-packages`，无 venv 探测 |
+> | 10 | `79ff09a5` | 修复宿主环境泄漏导致的测试失败（conftest 提前 import requests / `load_config` 还原 cow_lang / `get_conversation_store()` 与 runner 同源 / catalog overlay 隔离 / SSRF 测试 stub `_check_engine_ready` / `conversation_store._ensure_schema` 加 `_schema_present()` 探测）+ 新增 `AGENTS.md` 记录 venv 差异 | **仍需保留**——`conversation_store._ensure_schema` 的 `_schema_present()` 探测与宿主语言/路径/可选依赖隔离修复 upstream 均无 |
+>
+> > **如何复用本表**：上游 release 后执行 `git fetch upstream && git log --oneline upstream/master..HEAD`，把不再出现的提交标为「已丢弃」并 `git revert`；其余保持。每次上游同步后再核一次即可。
+>
+> 其余代码与上游同步；本 fork 以 **Web 控制台前端（#3–#6）+ 仓库卫生（#1、#10）**为主，少量触及 Channel（feishu，见 #7）与 Memory（embedding，见 #8）层；不修改 Agent 核心 / Model / Knowledge 主流程。
+>
+> 同步上游：在 `dev` 分支执行 `git fetch upstream && git merge upstream/master` 即可（首次合并若冲突优先看 `chat.html` 与 `templates/layout/sidebar.html`；之后通常自动）。
 
 <br/>
 
-## 🌟 Highlights
-
-| Capability | Description |
-| :--- | :--- |
-| [Planning](https://docs.cowagent.ai/intro/architecture) | Decomposes complex tasks and executes them step by step, looping over tools until the goal is reached |
-| [Multi-Agent](https://docs.cowagent.ai/multi-agent/team) | Build a team of Agents, each with its own role, model, skills, and knowledge, collaborating within a shared conversation |
-| [Memory](https://docs.cowagent.ai/memory/index) | Three-tier architecture (context → daily → core), automatic Deep Dream distillation, hybrid keyword + vector retrieval |
-| [Knowledge](https://docs.cowagent.ai/knowledge/index) | Auto-curates structured knowledge into a Markdown wiki, builds an evolving knowledge graph with visual browsing |
-| [Evolution](https://docs.cowagent.ai/memory/self-evolution) | Self-Evolution reviews conversations automatically to improve skills, follow up on unfinished tasks, and consolidate memory and knowledge, growing through everyday use |
-| [Skills](https://docs.cowagent.ai/skills/index) | One-click install from [Skill Hub](https://skills.cowagent.ai/), GitHub, ClawHub; or create custom skills via natural-language conversation |
-| [Tools](https://docs.cowagent.ai/tools/index) | Built-in file I/O, terminal, browser, scheduler, memory retrieval, web search, and 10+ more tools — with native MCP integration |
-| [Channels](https://docs.cowagent.ai/channels/index) | Integrates with Web, WeChat, Feishu, DingTalk, WeCom, QQ, Official Accounts, Telegram, and Slack |
-| Multimodal | First-class support for text, images, voice, and files — recognition, generation, and delivery |
-| [Models](https://docs.cowagent.ai/models/index) | Claude, GPT, Gemini, DeepSeek, Qwen, GLM, Kimi, MiniMax, Doubao, and more — swap providers from the Web console with one click |
-| [Deploy](https://docs.cowagent.ai/guide/quick-start) | One-line installer, unified Web console, multiple deployment modes (local, Docker, server) |
-
-<br/>
-
-## 🏗️ Architecture
-
-<img src="https://cdn.jsdelivr.net/gh/zhayujie/cowagent-assets@main/architecture/en/architecture.jpg" alt="CowAgent Architecture" width="750"/>
-
-CowAgent is a complete **Agent Harness**: messages flow in through **Channels**; the **Agent Core** plans and reasons over memory, knowledge, and the available tools and skills; **Models** generate the response, which is sent back through the originating channel. Every layer is decoupled and independently extensible.
-
-Read more in [Architecture](https://docs.cowagent.ai/intro/architecture).
-
-<br/>
-
-## 🚀 Quick Start
-
-A one-line installer takes care of dependencies, configuration, and startup:
-
-**Linux / macOS:**
-
-```bash
-bash <(curl -fsSL https://cdn.link-ai.tech/code/cow/run.sh)
-```
-
-**Windows (PowerShell):**
-
-```powershell
-irm https://cdn.link-ai.tech/code/cow/run.ps1 | iex
-```
-
-**Docker:**
-
-```bash
-curl -O https://cdn.link-ai.tech/code/cow/docker-compose.yml
-docker compose up -d
-```
-
-Once started, open `http://localhost:9899` to access the **Web console** — your one-stop hub to chat with the Agent, configure models, connect channels, and install skills.
-
-> Deploying on a server? Set `web_host` to `0.0.0.0` in `config.json` to make the console reachable from outside, and set `web_password` to protect it. Don't forget to open port `9899` in your firewall or security group.
-
-> 📖 Detailed guides: [Quick Start](https://docs.cowagent.ai/guide/quick-start) · [Install from Source](https://docs.cowagent.ai/guide/manual-install) · [Upgrade](https://docs.cowagent.ai/guide/upgrade)
-
-After installation, manage the service with the [cow CLI](https://docs.cowagent.ai/cli/index):
-
-```bash
-cow start | stop | restart        # service control
-cow status | logs                  # status and logs
-cow update                         # pull latest code and restart
-cow skill install <name>           # install a skill
-cow install-browser                # install browser automation
-```
-
-> 💻 Desktop client: download the **[CowAgent Desktop client](https://cowagent.ai/download/)** (macOS / Windows) — the backend is bundled, ready to use out of the box.
-
-<br/>
-
-## 👥 Multi-Agent Team
-
-Create a team of Agents, each with its own memory, capabilities, knowledge, and workspace. Each can focus on its own domain, or collaborate within a shared conversation to tackle complex tasks together. Multi-Agent teams are available on the Web, the desktop client, and IM channel integrations.
-
-<img src="https://cdn.jsdelivr.net/gh/zhayujie/cowagent-assets@main/screenshots/en/agent-team-overview.png" alt="CowAgent Multi-Agent Team" width="800"/>
-
-> See [Agent Team](https://docs.cowagent.ai/multi-agent/team) for details.
-
-<br/>
-
-## 🤖 Models
-
-CowAgent supports all mainstream LLM providers. **Chat, vision, image generation, ASR/TTS, and embeddings** can each be routed to a different vendor. Providers are configured directly in the Web console — no manual file editing required.
-
-| Provider | Featured Models | Chat | Vision | Image Gen | ASR | TTS | Embedding |
-| --- | --- | :-: | :-: | :-: | :-: | :-: | :-: |
-| [DeepSeek](https://docs.cowagent.ai/models/deepseek) | deepseek-flash (V4.1) / pro | ✅ | ✅ | | | | |
-| [Claude](https://docs.cowagent.ai/models/claude) | claude-opus-5 / fable-5.1 | ✅ | ✅ | | | | |
-| [OpenAI](https://docs.cowagent.ai/models/openai) | gpt-6-astra / gpt-5.6 series | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Gemini](https://docs.cowagent.ai/models/gemini) | gemini-3.8-flash | ✅ | ✅ | ✅ | | | |
-| [MiniMax](https://docs.cowagent.ai/models/minimax) | MiniMax-M3 | ✅ | ✅ | ✅ | | ✅ | |
-| [GLM](https://docs.cowagent.ai/models/glm) | glm-5.3-flash, glm-5v-turbo | ✅ | ✅ | | ✅ | | ✅ |
-| [Qwen](https://docs.cowagent.ai/models/qwen) | qwen3.8-flash | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Kimi](https://docs.cowagent.ai/models/kimi) | kimi-k3 | ✅ | ✅ | | | | |
-| [Doubao](https://docs.cowagent.ai/models/doubao) | doubao-seed-2.1 series | ✅ | ✅ | ✅ | | | ✅ |
-| [ERNIE](https://docs.cowagent.ai/models/qianfan) | ernie-5.1 | ✅ | ✅ | | | | |
-| [MiMo](https://docs.cowagent.ai/models/mimo) | mimo-v2.5 / pro | ✅ | ✅ | | | ✅ | |
-| [LinkAI](https://docs.cowagent.ai/models/linkai) | One key for 100+ models | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Custom](https://docs.cowagent.ai/models/custom) | Local models / third-party proxy | ✅ | | | | | |
-
-> For details on each provider, see the [Models overview](https://docs.cowagent.ai/models/index).
-
-<br/>
-
-## 💬 Channels
-
-A single Agent instance can serve multiple channels in parallel. Most channels can be onboarded right from the Web console.
-
-| Channel | Text | Image | File | Voice | Group |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| [Web Console](https://docs.cowagent.ai/channels/web) (default) | ✅ | ✅ | ✅ | ✅ | |
-| [Telegram](https://docs.cowagent.ai/channels/telegram) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Slack](https://docs.cowagent.ai/channels/slack) | ✅ | ✅ | ✅ | | ✅ |
-| [Discord](https://docs.cowagent.ai/channels/discord) | ✅ | ✅ | ✅ | | ✅ |
-| [WeChat](https://docs.cowagent.ai/channels/weixin) | ✅ | ✅ | ✅ | ✅ | |
-| [Feishu / Lark](https://docs.cowagent.ai/channels/feishu) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [DingTalk](https://docs.cowagent.ai/channels/dingtalk) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [WeCom Bot](https://docs.cowagent.ai/channels/wecom-bot) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [QQ](https://docs.cowagent.ai/channels/qq) | ✅ | ✅ | ✅ | | ✅ |
-| [WeCom App](https://docs.cowagent.ai/channels/wecom) | ✅ | ✅ | ✅ | ✅ | |
-| [WeChat Customer Service](https://docs.cowagent.ai/channels/wechat-kf) | ✅ | ✅ | ✅ | ✅ | |
-| [WeChat Official Account](https://docs.cowagent.ai/channels/wechatmp) | ✅ | ✅ | | ✅ | |
-
-> See the [Channels overview](https://docs.cowagent.ai/channels/index) for setup details.
-
-<img src="https://cdn.jsdelivr.net/gh/zhayujie/cowagent-assets@main/screenshots/en/web-console-chat.png" alt="CowAgent Web Console" width="800"/>
-
-*The Web console is the default channel and the unified entry point to configure models, channels, skills, memory, and more.*
-
-<br/>
-
-## 🧠 Memory & Knowledge Base
-
-**Long-term memory** uses a three-tier architecture: conversation context (short-term) → daily memory (mid-term) → MEMORY.md (long-term). A nightly **Deep Dream** pass distills scattered memories into refined long-term entries and a narrative journal. See [Long-term Memory](https://docs.cowagent.ai/memory/index) · [Deep Dream](https://docs.cowagent.ai/memory/deep-dream).
-
-**Personal knowledge base** complements the time-ordered memory by organizing structured knowledge **by topic**. The Agent automatically curates valuable information from conversations, maintains cross-references and indexes, and the Web console offers an interactive knowledge-graph view. See [Personal Knowledge Base](https://docs.cowagent.ai/knowledge/index).
-
-<table>
-  <tr>
-    <td width="50%">
-      <img src="https://cdn.jsdelivr.net/gh/zhayujie/cowagent-assets@main/screenshots/en/web-console-memory.png" alt="Long-term Memory" />
-      <p align="center"><em>Long-term Memory · Three-tier architecture + Deep Dream</em></p>
-    </td>
-    <td width="50%">
-      <img src="https://cdn.jsdelivr.net/gh/zhayujie/cowagent-assets@main/screenshots/en/web-console-knowledge.png" alt="Personal Knowledge Base" />
-      <p align="center"><em>Knowledge Base · Auto-curated Markdown wiki</em></p>
-    </td>
-  </tr>
-</table>
-
-<br/>
-
-## 🔧 Tools & Skills
-
-**Tools** are atomic capabilities the Agent uses to interact with system resources. **Skills** are higher-level workflows defined by a manifest file that compose multiple tools to accomplish complex tasks.
-
-### Tool System
-
-**Built-in tools** cover file I/O (`read` / `write` / `edit` / `ls`), terminal (`bash`), file sending (`send`), memory retrieval (`memory`), environment variables (`env_config`), web fetching (`web_fetch`), scheduling (`scheduler`), web search (`web_search`), vision (`vision`), and browser automation (`browser`).
-
-**MCP protocol** integrates the open ecosystem of [Model Context Protocol](https://modelcontextprotocol.io) servers. A single `mcp.json` is enough — supports stdio / SSE transports, hot reload, and zero-code integration.
-
-Learn more: [Tools overview](https://docs.cowagent.ai/tools/index) · [MCP integration](https://docs.cowagent.ai/tools/mcp).
-
-### Skills System
-
-- **[Skill Hub](https://skills.cowagent.ai/)** — open skill marketplace: browse, search, install in one click
-- **GitHub / ClawHub / URL and more** — install skills from any source
-- **Conversational authoring** — generate custom skills through dialogue with `skill-creator`; turn any workflow or third-party API into a reusable skill
-
-```bash
-/skill list                   # list installed skills
-/skill search <keyword>        # search the marketplace
-/skill install <name>          # one-click install
-```
-
-Learn more: [Skills overview](https://docs.cowagent.ai/skills/index) · [Creating Skills](https://docs.cowagent.ai/skills/create).
-
-<br/>
-
-## 🏷 Changelog
-
-> **2026.09.14:** [v2.1.9](https://github.com/zhayujie/CowAgent/releases/tag/2.1.9) — Multi-Agent collaboration refinements, configurable model lists and multiple fallback models, channel integration fixes, new image models (gpt-image-2.5), plus voice fixes.
-
-> **2026.09.10:** [v2.1.8](https://github.com/zhayujie/CowAgent/releases/tag/2.1.8) — Multi-Agent teams, manual scheduled task creation, context-usage visualization, new models and search providers, workspace file editing.
-
-> **2026.08.20:** [v2.1.7](https://github.com/zhayujie/CowAgent/releases/tag/2.1.7) — Multiple workspaces, session-level permission modes, task notifications, desktop improvements, plus new model support.
-
-> **2026.08.12:** [v2.1.6](https://github.com/zhayujie/CowAgent/releases/tag/2.1.6) — Sub agents for parallel task delegation, reasoning-effort settings, a pluggable memory vector backend, plus experience and security improvements.
-
-> **2026.07.29:** [v2.1.5](https://github.com/zhayujie/CowAgent/releases/tag/2.1.5) — Workspace with file preview, core tool improvements (file search, write-time validation, background commands), context compaction (`/compact`), one-click prompt optimization, security hardening.
-
-> **2026.07.20:** [v2.1.4](https://github.com/zhayujie/CowAgent/releases/tag/2.1.4) — Desktop experience improvements, MCP OAuth authorization, Lark channel enhancements, scheduler improvements and data backup, new models.
-
-> **2026.07.08:** [v2.1.3](https://github.com/zhayujie/CowAgent/releases/tag/2.1.3) — [Desktop client](https://cowagent.ai/download/) for macOS / Windows, knowledge base document management, on-demand MCP tool retrieval, Traditional Chinese support, new models.
-
-> **2026.06.18:** [v2.1.2](https://github.com/zhayujie/CowAgent/releases/tag/2.1.2) — Web console upgrades (scheduled task management, knowledge base categories, multiple custom model providers), Self-Evolution improvements, new models (kimi-k2.7-code, glm-5.2), security hardening and refinements.
-
-> **2026.06.09:** [v2.1.1](https://github.com/zhayujie/CowAgent/releases/tag/2.1.1) — Self-Evolution, Web console upgrades (message management, parallel sessions), cross-platform MCP enhancements with concurrent calls, new models (MiniMax-M3, qwen3.7-plus), Python 3.13 support.
-
-> **2026.06.01:** [v2.1.0](https://github.com/zhayujie/CowAgent/releases/tag/2.1.0) — Internationalization, new channels (Telegram, Discord, Slack, WeChat Customer Service), CLI interaction upgrades, streamlined one-line install, MCP Streamable HTTP support, new models (claude-opus-4-8, MiMo).
-
-Full history: [Release Notes](https://docs.cowagent.ai/releases/overview)
-
-<br/>
-
-## 🤝 Community & Support
-
-Join our [**Discord server**](https://discord.gg/9U8eA8v9TR) to ask questions, share skills, and follow development:
-
-<a href="https://discord.gg/9U8eA8v9TR"><img src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
-
-You can also [file an issue](https://github.com/zhayujie/CowAgent/issues) on GitHub, or scan the QR code below to join our WeChat group:
-
-<img width="130" src="https://img-1317903499.cos.ap-guangzhou.myqcloud.com/docs/open-community.png">
-
-<br/>
-
-## 🔗 Related Projects
-
-- **[Cow Skill Hub](https://github.com/zhayujie/cow-skill-hub)** — open skill marketplace for AI Agents; works with CowAgent, OpenClaw, Claude Code, and more
-- **[bot-on-anything](https://github.com/zhayujie/bot-on-anything)** — lightweight LLM application framework with integrations for Slack, Telegram, Discord, Gmail, and more
-- **[AgentMesh](https://github.com/MinimalFuture/AgentMesh)** — open-source multi-agent framework for solving complex problems through team collaboration
-
-<br/>
-
-## 🏢 Enterprise Services
-
-[**LinkAI**](https://link-ai.tech/) is an all-in-one AI Agent platform for enterprises and developers, offering managed hosting and enterprise-grade support for CowAgent:
-
-- **🚀 Zero-deployment hosted runtime** — spin up a [CowAgent online assistant](https://link-ai.tech/cowagent/create) in under a minute, no server required
-- **🧠 Agent infrastructure** — unified access to LLMs, knowledge bases, databases, skills, and workflows; plug-and-play building blocks that extend what CowAgent can do
-- **🏢 Team & enterprise features** — workspaces, role-based access, audit logs, and private deployment for production use cases
-
-For enterprise inquiries: sales@simple-future.tech or [scan the QR code](https://cdn.link-ai.tech/contact/customer-support.png) to reach our team on WeChat.
-
-<br/>
-
-## 🛠️ Development & Contributing
-
-All kinds of contributions are welcome — new features, bug fixes, performance improvements, docs, or sharing your own skills on the [Skill Hub](https://skills.cowagent.ai/submit). See [CONTRIBUTING.md](/CONTRIBUTING.md) to get started, then open an Issue to discuss or send a PR directly.
-
-⭐ Star the project to show your support, and Watch → Custom → Releases to get notified of new versions. PRs and Issues are always welcome.
-
-## 🌟 Contributors
-
-![cow contributors](https://contrib.rocks/image?repo=zhayujie/CowAgent&max=1000)
-
-<br/>
-
-## ⚠️ Disclaimer
-
-1. This project is licensed under the [MIT License](/LICENSE) and is intended for technical research and learning. You are responsible for complying with applicable laws and regulations in your jurisdiction; the maintainers assume no liability for any consequences arising from use of this project.
-2. **Cost & safety:** Agent mode consumes substantially more tokens than regular chat — pick models that balance quality and cost. The Agent has access to your local operating system, so only deploy it in trusted environments.
-3. CowAgent is a pure open-source project and does not participate in, authorize, or issue any cryptocurrency.
-
-<br/>
-
-## 📌 Project Renaming Notice
-
-This project was previously named `chatgpt-on-wechat` and is now officially **CowAgent**. The old GitHub URL redirects automatically; existing users may optionally run `git remote set-url origin https://github.com/zhayujie/CowAgent.git` to update the local remote.
+## 关于本仓库
+
+本仓库是 [`zhayujie/CowAgent`](https://github.com/zhayujie/CowAgent) 的个人 fork，本 README 仅承载 fork 相对上游的改动说明。
+
+> [!WARNING]
+> ### ⚙️ 运行环境与上游不同：本 fork 使用项目内虚拟环境 `.venv`
+>
+> 上游把依赖装进系统 Python 的 user site 并常用 `--break-system-packages`；本 fork
+> 改为**项目内隔离 venv**（`.venv/`，由 `uv venv --python 3.12` 创建），服务由
+> systemd `cowagent.service` 指向 `.venv/bin/python` 启动。
+>
+> - 装包：`uv pip install --python .venv/bin/python <pkg>`（venv 无 `pip` 模块，**不要**用系统 `pip3`）
+> - 测试：`.venv/bin/python -m pytest tests/ -q`
+> - `cow` CLI：`.venv/bin/cow`（非 `~/.local/bin/cow`）
+> - **不要卸载** `~/.local` 下的系统包来“清理环境”——曾因误删 `httpx` 导致飞书通道全部无法启动
+>
+> 面向 AI 助手的详细约定见 [`AGENTS.md`](./AGENTS.md)。
+
+完整的产品介绍、安装指南、模型 / 通道 / 技能 / 记忆 / 知识库 / 多智能体 / 架构 / 更新日志等内容，请参阅上游 README：
+
+- 英文：<https://github.com/zhayujie/CowAgent/blob/master/README.md>
+- 简体中文：<https://github.com/zhayujie/CowAgent/blob/master/docs/zh/README.md>
+- 繁體中文：<https://github.com/zhayujie/CowAgent/blob/master/docs/zh/README-Hant.md>
+- 日本語：<https://github.com/zhayujie/CowAgent/blob/master/docs/ja/README.md>
