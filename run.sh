@@ -357,7 +357,20 @@ check_and_install_tool() {
 # Detect and set Python command
 detect_python_command() {
     FOUND_NEWER_VERSION=""
-    
+
+    # Prefer the project-local virtualenv when present. Everything (deps, the
+    # `cow` CLI, app.py) then lives inside .venv and stays isolated from the
+    # system interpreter and user-level site-packages.
+    local _venv_python="${BASE_DIR:-$(pwd)}/.venv/bin/python"
+    if [ -x "$_venv_python" ]; then
+        PYTHON_CMD="$_venv_python"
+        PYTHON_VERSION="$("$_venv_python" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)"
+        export PYTHON_CMD
+        export PYTHON_VERSION
+        echo -e "${GREEN}✅ Using project virtualenv: $PYTHON_CMD (Python $PYTHON_VERSION)${NC}"
+        return 0
+    fi
+
     # Try to find Python command in order of preference
     for cmd in python3 python python3.12 python3.11 python3.10 python3.9 python3.8 python3.7 python3.13; do
         if command -v $cmd &> /dev/null; then
@@ -398,16 +411,32 @@ detect_python_command() {
     echo -e "${GREEN}✅ Found Python: $PYTHON_CMD (version $PYTHON_VERSION)${NC}"
 }
 
+# Print the command prefix used to run pip for $PYTHON_CMD.
+# uv-created virtualenvs ship no `pip` module, so fall back to `uv pip`
+# with an explicit --python target when pip is unavailable.
+pip_cmd() {
+    if $PYTHON_CMD -m pip --version &> /dev/null; then
+        echo "$PYTHON_CMD -m pip"
+        return 0
+    fi
+    if command -v uv &> /dev/null; then
+        echo "uv pip --python $PYTHON_CMD"
+        return 0
+    fi
+    return 1
+}
+
 # Check Python version (>= 3.7)
 check_python_version() {
     detect_python_command
-    
-    # Verify pip is available
-    if ! $PYTHON_CMD -m pip --version &> /dev/null; then
-        echo -e "${RED}❌ pip not found for $PYTHON_CMD. Please install pip.${NC}"
+
+    # Verify pip (or uv pip) is available for the selected interpreter
+    if ! PIP_CMD="$(pip_cmd)"; then
+        echo -e "${RED}❌ pip not found for $PYTHON_CMD. Please install pip or uv.${NC}"
         exit 1
     fi
-    
+    export PIP_CMD
+
     echo -e "${GREEN}✅ pip is available for $PYTHON_CMD${NC}"
 }
 
@@ -532,21 +561,21 @@ install_dependencies() {
     # which previously dumped a confusing usage message and failed the install.
     PIP_EXTRA_ARGS=""
     if $PYTHON_CMD -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null \
-       && $PYTHON_CMD -m pip install --help 2>/dev/null | grep -q -- "--break-system-packages"; then
+       && ${PIP_CMD:-$PYTHON_CMD -m pip} install --help 2>/dev/null | grep -q -- "--break-system-packages"; then
         PIP_EXTRA_ARGS="--break-system-packages"
         echo -e "${YELLOW}Python 3.11+ with break-system-packages support detected${NC}"
     fi
 
     echo -e "${YELLOW}Upgrading pip and basic tools...${NC}"
     set +e
-    $PYTHON_CMD -m pip install --upgrade pip setuptools wheel importlib_metadata --ignore-installed $PIP_EXTRA_ARGS $PIP_MIRROR > /tmp/pip_upgrade.log 2>&1
+    ${PIP_CMD:-$PYTHON_CMD -m pip} install --upgrade pip setuptools wheel importlib_metadata --ignore-installed $PIP_EXTRA_ARGS $PIP_MIRROR > /tmp/pip_upgrade.log 2>&1
     [ $? -ne 0 ] && echo -e "${YELLOW}⚠️  Some tools failed to upgrade, but continuing...${NC}"
     set -e
     rm -f /tmp/pip_upgrade.log
 
     echo -e "${YELLOW}Installing project dependencies...${NC}"
     set +e
-    $PYTHON_CMD -m pip install -r requirements.txt $PIP_EXTRA_ARGS $PIP_MIRROR > /tmp/pip_install.log 2>&1
+    ${PIP_CMD:-$PYTHON_CMD -m pip} install -r requirements.txt $PIP_EXTRA_ARGS $PIP_MIRROR > /tmp/pip_install.log 2>&1
     local exit_code=$?
     set -e
     cat /tmp/pip_install.log
@@ -560,14 +589,14 @@ install_dependencies() {
             IGNORE_PACKAGES="$IGNORE_PACKAGES --ignore-installed $pkg"
         done
         set +e
-        $PYTHON_CMD -m pip install -r requirements.txt $IGNORE_PACKAGES $PIP_EXTRA_ARGS $PIP_MIRROR \
+        ${PIP_CMD:-$PYTHON_CMD -m pip} install -r requirements.txt $IGNORE_PACKAGES $PIP_EXTRA_ARGS $PIP_MIRROR \
             && echo -e "${GREEN}✅ Dependencies installed successfully (workaround applied).${NC}" \
             || echo -e "${YELLOW}⚠️  Some dependencies may have issues, but continuing...${NC}"
         set -e
     elif grep -q "externally-managed-environment" /tmp/pip_install.log; then
         echo -e "${YELLOW}⚠️  Detected externally-managed environment, retrying with --break-system-packages...${NC}"
         set +e
-        $PYTHON_CMD -m pip install -r requirements.txt --break-system-packages $PIP_MIRROR \
+        ${PIP_CMD:-$PYTHON_CMD -m pip} install -r requirements.txt --break-system-packages $PIP_MIRROR \
             && echo -e "${GREEN}✅ Dependencies installed successfully (system packages override applied).${NC}" \
             || echo -e "${YELLOW}⚠️  Some dependencies may have issues, but continuing...${NC}"
         set -e
@@ -580,7 +609,7 @@ install_dependencies() {
     # Register `cow` CLI command via editable install
     echo -e "${YELLOW}Registering cow CLI...${NC}"
     set +e
-    $PYTHON_CMD -m pip install -e . $PIP_EXTRA_ARGS $PIP_MIRROR > /dev/null 2>&1
+    ${PIP_CMD:-$PYTHON_CMD -m pip} install -e . $PIP_EXTRA_ARGS $PIP_MIRROR > /dev/null 2>&1
     if command -v cow &> /dev/null; then
         echo -e "${GREEN}✅ cow CLI registered.${NC}"
     else
