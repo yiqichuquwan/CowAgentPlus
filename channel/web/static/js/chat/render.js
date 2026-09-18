@@ -88,6 +88,9 @@ function createUserMessageEl(content, timestamp, attachments) {
                 ${attachHtml}${textHtml}
             </div>
             <div class="flex items-center justify-end gap-2 mt-1.5">
+                <button class="copy-msg-btn text-xs text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors cursor-pointer" title="${currentLang === 'zh' ? '复制' : 'Copy'}">
+                    <i class="fas fa-copy"></i>
+                </button>
                 <button class="edit-msg-btn text-xs text-slate-300 dark:text-slate-600 hover:text-primary-400 dark:hover:text-primary-400 transition-colors cursor-pointer" title="${t('edit_message')}">
                     <i class="fas fa-pen-to-square"></i>
                 </button>

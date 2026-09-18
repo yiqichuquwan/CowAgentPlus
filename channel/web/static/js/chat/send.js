@@ -58,54 +58,27 @@ async function regenerateResponse(botMsgEl) {
     const regenAddressed = addressedAgentId(userContent);
     if (regenAddressed) body.speaker_agent_id = regenAddressed;
 
-    const MAX_RETRIES = 2;
-    const RETRY_DELAY_MS = 1000;
-
-    function postWithRetry(attempt) {
-        fetch('/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'success') {
-                rememberLiveSpeaker(data);
-                setLoadingSpeaker(loadingEl, data.request_id);
-                if (data.inline_reply) {
-                    loadingEl.remove();
-                    addBotMessage(data.inline_reply, new Date());
-                } else if (data.stream) {
-                    setSendBtnCancelMode(data.request_id);
-                    startSSE(data.request_id, loadingEl, timestamp, null);
-                } else {
-                    loadingContainers[data.request_id] = loadingEl;
-                }
+    postMessage(body, {
+        tag: 'regenerateResponse',
+        onSuccess: (data) => {
+            rememberLiveSpeaker(data);
+            setLoadingSpeaker(loadingEl, data.request_id);
+            if (data.inline_reply) {
+                loadingEl.remove();
+                addBotMessage(data.inline_reply, new Date());
+            } else if (data.stream) {
+                setSendBtnCancelMode(data.request_id);
+                startSSE(data.request_id, loadingEl, timestamp, null);
             } else {
-                loadingEl.remove();
-                addBotMessage(t('error_send'), new Date());
-                resetSendBtnSendMode();
+                loadingContainers[data.request_id] = loadingEl;
             }
-        })
-        .catch(err => {
-            if (err.name === 'AbortError') {
-                loadingEl.remove();
-                addBotMessage(t('error_timeout'), new Date());
-                resetSendBtnSendMode();
-                return;
-            }
-            if (attempt < MAX_RETRIES) {
-                console.warn(`[regenerateResponse] attempt ${attempt + 1} failed, retrying...`, err);
-                setTimeout(() => postWithRetry(attempt + 1), RETRY_DELAY_MS * (attempt + 1));
-                return;
-            }
+        },
+        onFailure: (key) => {
             loadingEl.remove();
-            addBotMessage(t('error_send'), new Date());
+            addBotMessage(t(key), new Date());
             resetSendBtnSendMode();
-        });
-    }
-
-    postWithRetry(0);
+        },
+    });
 }
 
 function sendMessage() {
@@ -138,6 +111,7 @@ function sendMessage() {
 
     chatInput.value = '';
     resetComposerHeight();
+    saveDraft();
     pendingAttachments = [];
     renderAttachmentPreview();
     sendBtn.disabled = true;
@@ -157,56 +131,29 @@ function sendMessage() {
         }));
     }
 
-    const MAX_RETRIES = 2;
-    const RETRY_DELAY_MS = 1000;
-
-    function postWithRetry(attempt) {
-        fetch('/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'success') {
-                rememberLiveSpeaker(data);
-                setLoadingSpeaker(loadingEl, data.request_id);
-                if (data.inline_reply) {
-                    // Channel handled synchronously (e.g. /cancel fast-path);
-                    // render as a bot bubble and skip SSE entirely.
-                    loadingEl.remove();
-                    addBotMessage(data.inline_reply, new Date());
-                } else if (data.stream) {
-                    setSendBtnCancelMode(data.request_id);
-                    startSSE(data.request_id, loadingEl, timestamp, titleInfo);
-                } else {
-                    loadingContainers[data.request_id] = loadingEl;
-                }
+    postMessage(body, {
+        tag: 'sendMessage',
+        onSuccess: (data) => {
+            rememberLiveSpeaker(data);
+            setLoadingSpeaker(loadingEl, data.request_id);
+            if (data.inline_reply) {
+                // Channel handled synchronously (e.g. /cancel fast-path);
+                // render as a bot bubble and skip SSE entirely.
+                loadingEl.remove();
+                addBotMessage(data.inline_reply, new Date());
+            } else if (data.stream) {
+                setSendBtnCancelMode(data.request_id);
+                startSSE(data.request_id, loadingEl, timestamp, titleInfo);
             } else {
-                loadingEl.remove();
-                addBotMessage(t('error_send'), new Date());
-                resetSendBtnSendMode();
+                loadingContainers[data.request_id] = loadingEl;
             }
-        })
-        .catch(err => {
-            if (err.name === 'AbortError') {
-                loadingEl.remove();
-                addBotMessage(t('error_timeout'), new Date());
-                resetSendBtnSendMode();
-                return;
-            }
-            if (attempt < MAX_RETRIES) {
-                console.warn(`[sendMessage] attempt ${attempt + 1} failed, retrying...`, err);
-                setTimeout(() => postWithRetry(attempt + 1), RETRY_DELAY_MS * (attempt + 1));
-                return;
-            }
+        },
+        onFailure: (key) => {
             loadingEl.remove();
-            addBotMessage(t('error_send'), new Date());
+            addBotMessage(t(key), new Date());
             resetSendBtnSendMode();
-        });
-    }
-
-    postWithRetry(0);
+        },
+    });
 }
 
 function startSSE(requestId, loadingEl, timestamp, titleInfo, replayItems) {

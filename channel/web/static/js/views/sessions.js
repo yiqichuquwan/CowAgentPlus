@@ -612,6 +612,7 @@ function switchSession(newSessionId, agentId) {
     sessionId = newSessionId;
     updateEditButtonsState();
     localStorage.setItem(activeSessionStorageKey(), sessionId);
+    restoreDraft();
     refreshWorkspaceSelector();
     refreshSessionSettings();
     // Reflect the new session's context in the mini pie right away.

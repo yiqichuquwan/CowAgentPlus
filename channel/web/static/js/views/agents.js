@@ -193,6 +193,13 @@ function openAgentDetail(agentId) {
     if (fileDd) fileDd._ddValue = 'AGENT.md';
     setAgentCoreViewMode('edit');
     loadAgentCoreFile();
+    // Switching Agents while the skills tab is visible used to leave the
+    // previous Agent's checkboxes on screen: renderAgentDetail() and
+    // loadAgentCoreFile() refresh the hidden profile/files panes, but nothing
+    // touched the skills pane unless the user clicked back into it. Repaint
+    // it here when it's the one currently in view.
+    const activeTab = document.querySelector('.agent-detail-tab.active')?.dataset.tab;
+    if (activeTab === 'skills') renderAgentSkillsPane();
     // The model picker is drawn from the same catalog the composer uses, which
     // depends on which providers have keys. Re-render once it has arrived.
     if (!_sessCfg) refreshSessionSettings().then(() => {
