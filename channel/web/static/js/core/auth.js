@@ -173,5 +173,14 @@ function initApp() {
     // three paths into the app. Opening the routed view any earlier would
     // switch views behind the login overlay.
     routeApply();
+    // PWA shortcuts installed before the path router shipped still arrive as
+    // /?view=<id> (the /chat redirect preserves the query). Honour the view
+    // once; the router then settles the address bar on its canonical path.
+    try {
+        const deepLinkView = new URLSearchParams(window.location.search).get('view');
+        if (deepLinkView && VIEW_META[deepLinkView] && deepLinkView !== currentView) {
+            navigateTo(deepLinkView);
+        }
+    } catch (e) { /* malformed URL: ignore */ }
 }
 

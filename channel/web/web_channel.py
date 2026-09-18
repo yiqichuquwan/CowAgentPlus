@@ -41,7 +41,7 @@ from channel.web.api.openai_compat import (  # noqa: F401
     OpenAIChatCompletionsHandler,
 )
 from channel.web.api.pages import (  # noqa: F401
-    AssetsHandler, ChatHandler, HealthHandler, RootHandler,
+    AssetsHandler, ChatHandler, HealthHandler, PwaFileHandler, RootHandler,
 )
 from channel.web.api.scheduler import (  # noqa: F401
     SchedulerCreateHandler, SchedulerDeleteHandler, SchedulerHandler,
@@ -153,6 +153,10 @@ URLS = (
     '/api/update/status', 'UpdateStatusHandler',
     '/mcp/oauth/callback', 'McpOAuthCallbackHandler',
     '/assets/(.*)', 'AssetsHandler',
+    # The PWA manifest and service worker must be served from the root, not
+    # from /assets/: a worker under /assets/ could only control /assets/, and
+    # the manifest is fetched before auth so it must not sit behind /api/.
+    r'/(manifest(?:\.en)?\.webmanifest|sw\.js)', 'PwaFileHandler',
     # Views inside the single-page console. Each serves the same shell;
     # the frontend router reads the path and opens the view it names,
     # so a reload or a shared link lands where it says. Last in the

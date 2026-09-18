@@ -3,7 +3,9 @@
 RootHandler and ChatHandler both serve the console shell -- every in-app
 path renders the same page and the frontend router takes it from there.
 AssetsHandler serves everything under static/, and decides what may be
-cached immutably.
+cached immutably. PwaFileHandler re-serves two of those files -- the manifest
+and the service worker -- from the console root, where the browser requires
+them to live.
 """
 
 import json
@@ -21,10 +23,18 @@ class RootHandler:
     """Where /chat used to live. The console is at / now, so that the address
     bar reads as paths into one app rather than as a page with state after it.
     Kept as a redirect because /chat is what older bookmarks, and the startup
-    banner of any running instance, still point at."""
+    banner of any running instance, still point at. The query string travels
+    with it so a PWA shortcut opened on /chat?view=... does not lose its view."""
 
     def GET(self):
-        raise web.seeother('/')
+        query = web.ctx.get('query', '')
+        target = '/' + query if query else '/'
+        # Relative Location, deliberately: web.py's redirect helpers prepend
+        # web.ctx.home, an absolute http:// URL built from HTTP_HOST that
+        # downgrades the client when this console is reached through a
+        # TLS-terminating reverse proxy. A relative target is resolved by
+        # the browser against whatever scheme/host it actually used.
+        raise web.HTTPError("303 See Other", {"Location": target}, "")
 
 
 class HealthHandler:
@@ -127,3 +137,41 @@ class AssetsHandler:
         except Exception as e:
             logger.error(f"Error serving static file: {e}", exc_info=True)
             raise web.notfound()
+
+
+class PwaFileHandler:
+    """Serve the PWA entry files from the console root.
+
+    The service worker has to live at the root (or use a Service-Worker-Allowed
+    header) to control /chat; a worker under /assets/ could only ever control
+    /assets/. The manifest is kept next to it so it can be fetched without
+    touching the auth-guarded API surface. Both files physically live in
+    static/ -- this handler is the root-level alias AssetsHandler cannot give.
+    """
+
+    _FILES = {
+        'manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json; charset=utf-8'),
+        'manifest.en.webmanifest': ('manifest.en.webmanifest', 'application/manifest+json; charset=utf-8'),
+        'sw.js': ('sw.js', 'application/javascript; charset=utf-8'),
+    }
+
+    def GET(self, filename):
+        entry = self._FILES.get(filename)
+        if not entry:
+            raise web.notfound()
+        rel_path, content_type = entry
+        # This module lives in channel/web/api/, one level below the web root
+        # that static/ sits in.
+        web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        static_dir = os.path.join(web_dir, 'static')
+        full_path = os.path.normpath(os.path.join(static_dir, rel_path))
+        if not os.path.abspath(full_path).startswith(os.path.abspath(static_dir)):
+            raise web.notfound()
+        if not os.path.isfile(full_path):
+            raise web.notfound()
+        # Always revalidate: an upgraded console must not stay pinned to a
+        # stale manifest / service worker from the browser cache.
+        web.header('Content-Type', content_type)
+        web.header('Cache-Control', 'no-cache')
+        with open(full_path, 'rb') as f:
+            return f.read()

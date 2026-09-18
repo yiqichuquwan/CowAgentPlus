@@ -15,6 +15,7 @@ from channel.web.core._common import (
     _check_auth,
     _get_web_password,
     _is_password_enabled,
+    _is_secure_request,
     _session_expire_seconds,
 )
 from common.log import logger
@@ -115,7 +116,8 @@ class AuthLoginHandler:
             return json.dumps({"status": "error", "message": "Wrong password"})
         token = _create_auth_token()
         web.setcookie("cow_auth_token", token, expires=_session_expire_seconds(),
-                       path="/", httponly=True, samesite="Lax")
+                       path="/", httponly=True, samesite="Lax",
+                       secure=_is_secure_request())
         # Also return the token in the body: the desktop client (file:// origin)
         # can't rely on the cookie and sends it back via an Authorization header.
         return json.dumps({"status": "success", "token": token})

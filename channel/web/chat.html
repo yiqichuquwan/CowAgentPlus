@@ -4,7 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CowAgent Console</title>
-    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    <!-- PWA: installable standalone app. The manifest and service worker are
+         served from the console root (see PwaFileHandler) so the worker can
+         claim app-wide scope. The base manifest is Chinese; the inline script
+         below swaps in the English one when the console resolves to English. -->
+    <link id="pwa-manifest" rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#35a85b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CowAgent">
+    <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+    <!-- iOS standalone launch images (white-bg logo on the console's dark
+         background). iOS only uses an exact (device-width/height/dpr) match, so
+         every common portrait size is listed explicitly. -->
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash/splash-750x1334.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash/splash-828x1792.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1125x2436.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1170x2532.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1179x2556.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1242x2682.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1284x2778.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash/splash-1290x2796.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash/splash-1536x2048.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash/splash-1668x2388.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash/splash-2048x2732.png">
     <!-- Vendored third-party assets (no external CDN dependency).
          See channel/web/static/vendor/README.md for sources & versions. -->
     <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
@@ -84,6 +109,17 @@
         var theme = localStorage.getItem('cow_theme') || 'dark';
         if (theme === 'dark') document.documentElement.classList.add('dark');
         document.documentElement.setAttribute('lang', window.__cowResolveLang__());
+    })();
+    </script>
+    <script>
+    // Swap to the English manifest so the installed icon/home-screen label is
+    // localized. Runs in <head> so the correct manifest is in place before the
+    // browser evaluates installability.
+    (function() {
+        var link = document.getElementById('pwa-manifest');
+        if (link && window.__cowResolveLang__() === 'en') {
+            link.href = '/manifest.en.webmanifest';
+        }
     })();
     </script>
 </head>
@@ -217,5 +253,17 @@
     <script defer src="/assets/js/boot.js"></script>
 
     <script defer src="/assets/js/workspace.js"></script>
+
+    <!-- PWA service worker. Registered here (not from boot.js) so a hard reload
+         that wipes boot.js still re-registers the worker on first load. The
+         update prompt stays in boot.js — it needs the i18n + UI modules. -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(err => console.warn('[PWA] service worker registration failed:', err));
+        });
+    }
+    </script>
 </body>
 </html>

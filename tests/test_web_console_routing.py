@@ -203,7 +203,14 @@ def test_the_console_answers_at_the_root():
     with open(os.path.join(WEB, "api", "pages.py"), encoding="utf-8") as f:
         source = f.read()
     root = source[source.index("class RootHandler:"):]
-    assert "seeother('/')" in root[:root.index("\n\n\nclass ")]
+    body = root[:root.index("\n\n\nclass ")]
+    # The redirect lands on the root; a query string from /chat?view=... rides
+    # along, so a PWA shortcut installed before path routing keeps its view.
+    # It has to be a *relative* Location: web.seeother() prepends ctx.home, an
+    # absolute http:// URL that downgrades the client behind a TLS proxy.
+    assert '"Location": target' in body, body
+    assert "seeother" not in body, body
+    assert "web.ctx" in body and "query" in body, body
 
 
 def test_the_first_route_is_applied_only_once_auth_has_settled():
@@ -219,3 +226,46 @@ def test_the_first_route_is_applied_only_once_auth_has_settled():
     assert "addEventListener('popstate', routeApply)" in router
     # A bare call at the top level would run before auth.
     assert not re.search(r"^routeApply\(\)", router, re.M)
+
+
+def test_the_pwa_entry_files_are_served_from_the_console_root():
+    """The service worker must be answered at /sw.js and the manifest at
+    /manifest*.webmanifest. A worker under /assets/ could only control
+    /assets/, and the manifest is fetched before auth so it cannot sit behind
+    the API. Both physically live in static/; the URL table has to alias them
+    to the root, or the page's own <link rel="manifest"> and register('/sw.js')
+    load a 404 and the console silently stops being installable."""
+    assert re.search(r"manifest.*sw\\\.js\)',\s*'PwaFileHandler'", _backend_urls()), \
+        "the PWA root route is gone from the URL table"
+
+    from unittest.mock import patch
+
+    import channel.web.api.pages as pages
+
+    sent = []
+    with patch.object(pages.web, "header",
+                      lambda name, value=None: sent.append((name.lower(), value))):
+        for name in ("manifest.webmanifest", "manifest.en.webmanifest", "sw.js"):
+            del sent[:]
+            body = pages.PwaFileHandler().GET(name)
+            assert body, name
+            headers = dict(sent)
+            assert "no-cache" in headers.get("cache-control", ""), name
+
+
+def test_the_pwa_shortcuts_name_the_paths_the_router_writes():
+    """The shortcuts used to point at /chat?view=..., a query the path router
+    does not read and the /chat redirect would strip. A shortcut has to name
+    the same path the router writes, so reopening from the home screen lands
+    where clicking the sidebar would."""
+    import json
+
+    paths = {"/" + p if p else "/" for p in _route_paths().values()}
+    for name in ("manifest.webmanifest", "manifest.en.webmanifest"):
+        with open(os.path.join(STATIC, name), encoding="utf-8") as f:
+            manifest = json.load(f)
+        assert manifest["start_url"] == "/", (name, manifest["start_url"])
+        for shortcut in manifest["shortcuts"]:
+            url = shortcut["url"]
+            assert "?" not in url, (name, url)
+            assert url in paths, (name, url, sorted(paths))
