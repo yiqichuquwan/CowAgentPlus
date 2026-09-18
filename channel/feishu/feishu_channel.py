@@ -896,7 +896,12 @@ class FeiShuChanel(ChatChannel):
                     access_token,
                 ),
             )
-            msg_type, prepared_content_json = build_text_delivery(delivery_text)
+            # 定时任务推送一律使用飞书卡片（interactive Card 2.0），
+            # 让每次投递格式一致、Markdown 元素完整渲染。
+            msg_type, prepared_content_json = build_text_delivery(
+                delivery_text,
+                force_card=bool(context.get("is_scheduled_task")),
+            )
         elif reply.type == ReplyType.IMAGE_URL:
             # 图片上传
             reply_content = self._upload_image_url(reply.content, access_token)
