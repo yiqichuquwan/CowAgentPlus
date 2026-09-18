@@ -101,11 +101,24 @@ def _init_explicit_provider(provider_key: str):
     api_base = _resolve_api_base(provider_key, meta["default_base_url"])
 
     if not api_key:
-        logger.error(
-            f"[EmbeddingFactory] embedding_provider='{provider_key}' is set but its "
-            f"API key is missing. Memory will run in keyword-only mode."
-        )
-        return None
+        if provider_key.startswith("custom:"):
+            # Local OpenAI-compat services (Ollama / vLLM / LM Studio / LocalAI)
+            # don't validate Authorization tokens — empty api_key is a valid
+            # configuration, not a missing one. The UI explicitly allows saving
+            # a keyless custom provider ("API key is optional for custom
+            # providers"); the factory must agree or the user gets a
+            # "API key is missing" error after the UI said "configured".
+            api_key = "no-auth"
+            logger.warning(
+                f"[EmbeddingFactory] custom provider '{provider_key}' has no "
+                f"api_key; using placeholder (local services don't validate tokens)."
+            )
+        else:
+            logger.error(
+                f"[EmbeddingFactory] embedding_provider='{provider_key}' is set but its "
+                f"API key is missing. Memory will run in keyword-only mode."
+            )
+            return None
 
     model = (conf().get("embedding_model") or "").strip()
     # Custom providers without a model fall back to the provider's default.
