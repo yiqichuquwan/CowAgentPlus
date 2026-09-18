@@ -72,6 +72,14 @@ class TestBrowserNavigateSSRF(unittest.TestCase):
         patcher = patch.object(BrowserTool, "_get_service", return_value=self.stub)
         patcher.start()
         self.addCleanup(patcher.stop)
+        # These cases pin the SSRF guard, not browser availability. Without an
+        # engine installed (a clean venv has neither playwright nor a downloaded
+        # Chromium) the readiness preflight short-circuits every action before
+        # the guard runs, so the assertions below would test the onboarding
+        # message instead. Skip the preflight; the navigation itself is stubbed.
+        ready = patch.object(BrowserTool, "_check_engine_ready", return_value=None)
+        ready.start()
+        self.addCleanup(ready.stop)
 
     # --- Link-local / cloud-metadata: rejected before any service call ---
 
@@ -160,7 +168,8 @@ class TestBrowserNavigateSSRF(unittest.TestCase):
         tool = BrowserTool({"allow_private_targets": True})
         stub = _StubService()
         tool._service = stub
-        with patch.object(BrowserTool, "_get_service", return_value=stub):
+        with patch.object(BrowserTool, "_get_service", return_value=stub), \
+                patch.object(BrowserTool, "_check_engine_ready", return_value=None):
             result = tool.execute(
                 {"action": "navigate", "url": "http://169.254.169.254/latest/meta-data/"}
             )

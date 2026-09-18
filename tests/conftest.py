@@ -20,6 +20,17 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Import the real `requests` before any test module is collected. Several
+# security tests guard their own import with ``if "requests" not in
+# sys.modules`` and, when it is missing, install a *partial* stub (only `get`,
+# or a few exception types). Collection reaches those modules before anything
+# else imports requests, so the stub landed in sys.modules first and stayed
+# there for the whole session -- and a tool that later annotates with
+# ``requests.Response`` fails to import, taking its tests down with it.
+# requests is a hard dependency (requirements.txt), so the real module is
+# always importable; loading it here keeps the stub branches from firing.
+import requests  # noqa: F401
+
 _WEB_DIR = os.path.join(os.path.dirname(__file__), "..", "channel", "web")
 
 
@@ -111,14 +122,24 @@ def console_template_cache_not_poisoned():
 @pytest.fixture(autouse=True, scope="session")
 def workspace_out_of_the_way():
     import config as config_module
+    from common import i18n
 
     with tempfile.TemporaryDirectory(prefix="cow-tests-") as tmp:
         workspace = os.path.join(tmp, "cow")
         real_load = config_module.load_config
+        real_lang = i18n.get_language()
 
         def load_then_redirect():
             real_load()
             config_module.conf()["agent_workspace"] = workspace
+            # `load_config` resolves the host's `cow_lang` through i18n and
+            # caches it globally (config.py calls i18n.resolve_language). A
+            # developer whose config.json says "zh" would therefore flip the
+            # language for every test after the first load_config, and modules
+            # that pin English (test_feishu_progress_card) start asserting on
+            # Chinese. Neutralise it: pin the language that was active when the
+            # session started, undoing whatever the host config would set.
+            i18n.set_language(real_lang)
 
         # Applied now for tests that never load, and re-applied after any that
         # do, since loading replaces the value with the real one.
@@ -133,6 +154,7 @@ def workspace_out_of_the_way():
             yield workspace
         finally:
             config_module.load_config = real_load
+            i18n.set_language(real_lang)
 
 
 def _forget_resolved_paths():

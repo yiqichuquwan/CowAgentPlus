@@ -8,12 +8,11 @@ import os
 import sys
 import tempfile
 import unittest
-from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from agent.memory.conversation_store import ConversationStore
+from agent.memory.conversation_store import get_conversation_store
 from agent.subagent import runner
 from common.runtime_identity import identity_scope
 
@@ -27,10 +26,14 @@ class SubagentRunRecordTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.workspace = self._tmp.name
         # runner resolves the store from the parent's workspace; point that at
-        # a temporary one so nothing touches a real ~/cow database.
-        self.store = ConversationStore(
-            Path(self.workspace) / "memory" / "long-term" / "index.db"
-        )
+        # a temporary one so nothing touches a real ~/cow database. The key is
+        # to go through the *same* accessor the runner uses: on a multi-Agent
+        # install an unregistered workspace binds to the global DB, so a raw
+        # ConversationStore(self.workspace/...) would be a second, unrelated
+        # handle and every assertion here would read an empty table.
+        store = get_conversation_store(self.workspace)
+        store.delete_run("child-1")
+        self.store = store
 
     def tearDown(self):
         self._tmp.cleanup()

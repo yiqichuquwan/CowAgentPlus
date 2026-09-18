@@ -29,9 +29,17 @@ if "web" not in sys.modules:
 
 def _catalog_with(config):
     from channel.web.api import sessions as sessions_api
+    from models import model_catalog
 
+    # The overlay is host state: a real install keeps its user's edits in
+    # <workspace>/system/models.json, and a developer who has hidden OpenAI's
+    # presets there would empty this provider out and the assertions below
+    # would test their machine instead of the code. These cases are about the
+    # preset catalog plus the active model, so read an overlay-free view.
     with patch.object(sessions_api, "conf", return_value=config), \
-            patch("models.custom_provider.conf", return_value=config):
+            patch("models.custom_provider.conf", return_value=config), \
+            patch.object(model_catalog, "get_catalog_map", return_value={}), \
+            patch.object(model_catalog, "get_hidden_map", return_value={}):
         return sessions_api._session_model_catalog()
 
 

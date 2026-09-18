@@ -1871,6 +1871,28 @@ class ConversationStore:
             return ()
         return (st.st_dev, st.st_ino)
 
+    def _schema_present(self) -> bool:
+        """True when the conversation tables are actually in the file.
+
+        Checking the live schema rather than the file's dev/ino is what makes
+        replacement detection reliable: a corrupt file that is quarantined and
+        recreated can be handed the inode the old one released, so the metadata
+        looks unchanged while the new file has only the memory tables. The
+        actual question is "can I still select from sessions", and that is what
+        this answers.
+        """
+        try:
+            conn = self._raw_connect()
+        except Exception:
+            return False
+        try:
+            conn.execute("SELECT 1 FROM sessions LIMIT 1")
+            return True
+        except sqlite3.Error:
+            return False
+        finally:
+            conn.close()
+
     def _ensure_schema(self) -> None:
         """Recreate the conversation tables when the shared DB file was swapped.
 
@@ -1878,8 +1900,14 @@ class ConversationStore:
         replace it on corruption. Without this check, every later query would
         keep failing with "no such table: sessions" for the whole process
         lifetime, so new messages would silently stop being persisted.
+
+        Two triggers, because either can fire alone: a changed dev/ino (the file
+        was replaced by a different physical file), or a missing ``sessions``
+        table (the file was recreated and the filesystem reused the inode, so
+        the identity still matches but the schema is gone). The table check runs
+        only when the identity matches, so the steady state costs one stat.
         """
-        if self._db_identity() == self._schema_identity:
+        if self._db_identity() == self._schema_identity and self._schema_present():
             return
         logger.warning(
             "[ConversationStore] Shared DB file was replaced; recreating conversation schema"
